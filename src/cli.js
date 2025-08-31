@@ -36,6 +36,8 @@ export function createCLI() {
     .option('--margin <margin>', 'PDF页边距 (例如: 20mm)', '20mm')
     .option('--landscape', '横向页面')
     .option('--font-size <size>', '字体大小 (small|medium|large|xlarge 或具体数值如 14px)', 'medium')
+    .option('--chinese-font <font>', '中文字体 (simsun|simhei|simkai|fangsong|yahei|auto)', 'auto')
+    .option('--font-weight <weight>', '文字厚度 (light|normal|medium|semibold|bold|black 或数值如 400)', 'normal')
     .action(async (input, output, options) => {
       await handleConvert(input, output, options);
     });
@@ -69,6 +71,8 @@ async function handleConvert(input, output, options) {
     console.log(chalk.gray(`📝 格式: ${options.format.toUpperCase()}`));
     console.log(chalk.gray(`🎨 字体大小: ${options.fontSize}`));
     console.log(chalk.gray(`📏 页边距: ${options.margin}`));
+    console.log(chalk.gray(`🇨🇳 中文字体: ${options.chineseFont}`));
+    console.log(chalk.gray(`💪 文字厚度: ${options.fontWeight}`));
     if (options.landscape) {
       console.log(chalk.gray(`📱 页面方向: 横向`));
     }
@@ -89,7 +93,9 @@ async function handleConvert(input, output, options) {
 
     // 准备样式选项
     const styleOptions = {
-      fontSize: options.fontSize
+      fontSize: options.fontSize,
+      chineseFont: options.chineseFont,
+      fontWeight: options.fontWeight
     };
 
     // 执行转换

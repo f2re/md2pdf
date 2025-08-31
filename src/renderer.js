@@ -5,7 +5,7 @@
 import MarkdownIt from 'markdown-it';
 import katex from 'katex';
 import { escapeHtml, escapeRegExp } from './utils.js';
-import { MATH_DELIMITERS, MARKDOWN_CONFIG, KATEX_CONFIG, FONT_SIZE_CONFIG, DEFAULT_FONT_SIZE } from './config.js';
+import { MATH_DELIMITERS, MARKDOWN_CONFIG, KATEX_CONFIG, FONT_SIZE_CONFIG, DEFAULT_FONT_SIZE, CHINESE_FONT_CONFIG, DEFAULT_CHINESE_FONT, FONT_WEIGHT_CONFIG, DEFAULT_FONT_WEIGHT } from './config.js';
 import { generateHtmlDocument, generateMathHtml } from './template.js';
 
 /**
@@ -133,17 +133,25 @@ export class MarkdownLatexRenderer {
    * @returns {Object} 处理后的样式选项
    */
   processStyleOptions(styleOptions) {
-    const { fontSize = DEFAULT_FONT_SIZE } = styleOptions;
+    const { fontSize = DEFAULT_FONT_SIZE, chineseFont = DEFAULT_CHINESE_FONT, fontWeight = DEFAULT_FONT_WEIGHT } = styleOptions;
     
     // 如果是预设大小，转换为具体像素值
     let actualFontSize = fontSize;
     if (FONT_SIZE_CONFIG[fontSize]) {
       actualFontSize = FONT_SIZE_CONFIG[fontSize];
     }
+
+    // 如果是预设厚度，转换为具体数值
+    let actualFontWeight = fontWeight;
+    if (FONT_WEIGHT_CONFIG[fontWeight]) {
+      actualFontWeight = FONT_WEIGHT_CONFIG[fontWeight];
+    }
     
     return {
       ...styleOptions,
-      fontSize: actualFontSize
+      fontSize: actualFontSize,
+      chineseFont: chineseFont,
+      fontWeight: actualFontWeight
     };
   }
 }

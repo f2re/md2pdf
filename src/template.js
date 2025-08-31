@@ -2,6 +2,8 @@
  * HTML模板生成模块
  */
 
+import { CHINESE_FONT_CONFIG, FONT_WEIGHT_CONFIG } from './config.js';
+
 /**
  * 生成完整的HTML文档
  * @param {string} content - HTML内容
@@ -35,10 +37,12 @@ export function generateHtmlDocument(content, title = 'Markdown LaTeX Preview', 
  * 获取CSS样式
  * @param {Object} options - 样式选项
  * @param {string} options.fontSize - 字体大小
+ * @param {string} options.chineseFont - 中文字体
+ * @param {string} options.fontWeight - 文字厚度
  * @returns {string} CSS样式字符串
  */
 export function getCssStyles(options = {}) {
-  const { fontSize = '14px' } = options;
+  const { fontSize = '14px', chineseFont = 'auto', fontWeight = 'normal' } = options;
   
   /**
    * 将 px 转换为 pt (用于打印样式)
@@ -52,11 +56,30 @@ export function getCssStyles(options = {}) {
     const ptNumber = pxNumber * 0.75;
     return `${ptNumber}pt`;
   }
+
+  /**
+   * 获取字体族设置
+   * @param {string} chineseFontType - 中文字体类型
+   * @returns {string} 字体族CSS值
+   */
+  function getFontFamily(chineseFontType) {
+    return CHINESE_FONT_CONFIG[chineseFontType] || CHINESE_FONT_CONFIG.auto;
+  }
+
+  /**
+   * 获取字体厚度设置
+   * @param {string} fontWeightType - 文字厚度类型
+   * @returns {string} 字体厚度CSS值
+   */
+  function getFontWeight(fontWeightType) {
+    return FONT_WEIGHT_CONFIG[fontWeightType] || fontWeightType;
+  }
   
   return `
         /* 基础样式 */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: ${getFontFamily(chineseFont)};
+            font-weight: ${getFontWeight(fontWeight)};
             line-height: 1.6;
             max-width: 800px;
             margin: 0 auto;
