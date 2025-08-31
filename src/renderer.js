@@ -5,7 +5,7 @@
 import MarkdownIt from 'markdown-it';
 import katex from 'katex';
 import { escapeHtml, escapeRegExp } from './utils.js';
-import { MATH_DELIMITERS, MARKDOWN_CONFIG, KATEX_CONFIG } from './config.js';
+import { MATH_DELIMITERS, MARKDOWN_CONFIG, KATEX_CONFIG, FONT_SIZE_CONFIG, DEFAULT_FONT_SIZE } from './config.js';
 import { generateHtmlDocument, generateMathHtml } from './template.js';
 
 /**
@@ -103,9 +103,10 @@ export class MarkdownLatexRenderer {
   /**
    * 渲染 Markdown 内容为 HTML
    * @param {string} content - Markdown 内容
+   * @param {Object} [styleOptions] - 样式选项
    * @returns {string} 完整的 HTML 文档
    */
-  render(content) {
+  render(content, styleOptions = {}) {
     // 1. 处理数学表达式
     const { processedContent, mathExpressions } = this.processMathExpressions(content);
 
@@ -119,7 +120,30 @@ export class MarkdownLatexRenderer {
       html = html.replace(expr.placeholder, mathHtml);
     }
 
-    // 4. 包装成完整的 HTML 文档
-    return generateHtmlDocument(html);
+    // 4. 处理字体大小设置
+    const processedStyleOptions = this.processStyleOptions(styleOptions);
+
+    // 5. 包装成完整的 HTML 文档
+    return generateHtmlDocument(html, 'Markdown LaTeX Preview', processedStyleOptions);
+  }
+
+  /**
+   * 处理样式选项
+   * @param {Object} styleOptions - 原始样式选项
+   * @returns {Object} 处理后的样式选项
+   */
+  processStyleOptions(styleOptions) {
+    const { fontSize = DEFAULT_FONT_SIZE } = styleOptions;
+    
+    // 如果是预设大小，转换为具体像素值
+    let actualFontSize = fontSize;
+    if (FONT_SIZE_CONFIG[fontSize]) {
+      actualFontSize = FONT_SIZE_CONFIG[fontSize];
+    }
+    
+    return {
+      ...styleOptions,
+      fontSize: actualFontSize
+    };
   }
 }

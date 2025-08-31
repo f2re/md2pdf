@@ -24,16 +24,17 @@ export class MarkdownToPdfConverter {
    * @param {string} [options.output] - 输出文件路径
    * @param {string} [options.format='pdf'] - 输出格式 (pdf|html)
    * @param {Object} [options.pdfOptions] - PDF选项
+   * @param {Object} [options.styleOptions] - 样式选项
    * @returns {Promise<string>} 输出文件路径
    */
   async convert(options) {
-    const { input, output, format = 'pdf', pdfOptions = {} } = options;
+    const { input, output, format = 'pdf', pdfOptions = {}, styleOptions = {} } = options;
 
     // 读取 Markdown 文件
     const markdownContent = await fs.readFile(input, 'utf-8');
     
     // 渲染为 HTML
-    const html = this.renderer.render(markdownContent);
+    const html = this.renderer.render(markdownContent, styleOptions);
 
     if (format === 'html') {
       const outputPath = output || await getOutputPath(input, 'html');
@@ -123,16 +124,18 @@ export async function convertMarkdownToPdf(inputFile, outputFile, options = {}) 
  * 便捷函数：转换 Markdown 文件为 HTML
  * @param {string} inputFile - 输入文件路径
  * @param {string} [outputFile] - 输出文件路径
+ * @param {Object} [options] - 转换选项
  * @returns {Promise<string>} 输出文件路径
  */
-export async function convertMarkdownToHtml(inputFile, outputFile) {
+export async function convertMarkdownToHtml(inputFile, outputFile, options = {}) {
   const converter = new MarkdownToPdfConverter();
   
   try {
     return await converter.convert({
       input: inputFile,
       output: outputFile,
-      format: 'html'
+      format: 'html',
+      ...options
     });
   } finally {
     await converter.close();

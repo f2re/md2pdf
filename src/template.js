@@ -6,9 +6,11 @@
  * 生成完整的HTML文档
  * @param {string} content - HTML内容
  * @param {string} title - 文档标题
+ * @param {Object} options - 生成选项
+ * @param {string} options.fontSize - 字体大小
  * @returns {string} 完整的HTML文档
  */
-export function generateHtmlDocument(content, title = 'Markdown LaTeX Preview') {
+export function generateHtmlDocument(content, title = 'Markdown LaTeX Preview', options = {}) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,7 +22,7 @@ export function generateHtmlDocument(content, title = 'Markdown LaTeX Preview') 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
 
     <style>
-        ${getCssStyles()}
+        ${getCssStyles(options)}
     </style>
 </head>
 <body>
@@ -31,9 +33,26 @@ export function generateHtmlDocument(content, title = 'Markdown LaTeX Preview') 
 
 /**
  * 获取CSS样式
+ * @param {Object} options - 样式选项
+ * @param {string} options.fontSize - 字体大小
  * @returns {string} CSS样式字符串
  */
-export function getCssStyles() {
+export function getCssStyles(options = {}) {
+  const { fontSize = '14px' } = options;
+  
+  /**
+   * 将 px 转换为 pt (用于打印样式)
+   * @param {string} pxValue - px值，如 '14px'
+   * @returns {string} pt值，如 '10.5pt'
+   */
+  function convertPxToPt(pxValue) {
+    // 提取数字部分
+    const pxNumber = parseFloat(pxValue.replace('px', ''));
+    // 1px = 0.75pt (标准转换)
+    const ptNumber = pxNumber * 0.75;
+    return `${ptNumber}pt`;
+  }
+  
   return `
         /* 基础样式 */
         body {
@@ -44,6 +63,7 @@ export function getCssStyles() {
             padding: 20px;
             color: #333;
             background-color: #fff;
+            font-size: ${fontSize};
         }
 
         /* 数学公式样式 */
@@ -160,7 +180,7 @@ export function getCssStyles() {
                 max-width: none;
                 margin: 0;
                 padding: 15mm;
-                font-size: 12pt;
+                font-size: ${convertPxToPt(fontSize)};
             }
 
             .math-block {

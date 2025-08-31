@@ -7,6 +7,7 @@ Convert Markdown files with LaTeX math formulas to beautiful PDFs.
 - LaTeX math formulas (inline and block)
 - Professional PDF formatting
 - Code syntax highlighting
+- **Font size customization (small, medium, large, xlarge or custom values)**
 - Modular architecture
 - CLI and programmatic usage
 
@@ -33,6 +34,13 @@ node md2pdf.js input.md --margin 25mm
 
 # Landscape orientation
 node md2pdf.js input.md --landscape
+
+# Font size options
+node md2pdf.js input.md --font-size small    # 12px
+node md2pdf.js input.md --font-size medium   # 14px (default)
+node md2pdf.js input.md --font-size large    # 16px
+node md2pdf.js input.md --font-size xlarge   # 18px
+node md2pdf.js input.md --font-size 20px     # Custom size
 
 # Help
 node md2pdf.js --help

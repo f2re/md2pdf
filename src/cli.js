@@ -35,6 +35,7 @@ export function createCLI() {
     .option('-f, --format <format>', '输出格式 (pdf|html)', 'pdf')
     .option('--margin <margin>', 'PDF页边距 (例如: 20mm)', '20mm')
     .option('--landscape', '横向页面')
+    .option('--font-size <size>', '字体大小 (small|medium|large|xlarge 或具体数值如 14px)', 'medium')
     .action(async (input, output, options) => {
       await handleConvert(input, output, options);
     });
@@ -66,6 +67,11 @@ async function handleConvert(input, output, options) {
     console.log(chalk.gray(`📖 输入: ${input}`));
     console.log(chalk.gray(`📁 输出: ${output}`));
     console.log(chalk.gray(`📝 格式: ${options.format.toUpperCase()}`));
+    console.log(chalk.gray(`🎨 字体大小: ${options.fontSize}`));
+    console.log(chalk.gray(`📏 页边距: ${options.margin}`));
+    if (options.landscape) {
+      console.log(chalk.gray(`📱 页面方向: 横向`));
+    }
 
     // 准备PDF选项
     const pdfOptions = {};
@@ -81,14 +87,19 @@ async function handleConvert(input, output, options) {
       pdfOptions.landscape = true;
     }
 
+    // 准备样式选项
+    const styleOptions = {
+      fontSize: options.fontSize
+    };
+
     // 执行转换
     const startTime = Date.now();
     
     if (options.format === 'pdf') {
-      await convertMarkdownToPdf(input, output, { pdfOptions });
+      await convertMarkdownToPdf(input, output, { pdfOptions, styleOptions });
     } else if (options.format === 'html') {
       const { convertMarkdownToHtml } = await import('./converter.js');
-      await convertMarkdownToHtml(input, output);
+      await convertMarkdownToHtml(input, output, { styleOptions });
     } else {
       throw new Error(`不支持的格式: ${options.format}`);
     }

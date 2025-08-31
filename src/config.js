@@ -71,3 +71,18 @@ export const PAGE_CONFIG = {
  * KaTeX 渲染等待时间
  */
 export const KATEX_RENDER_DELAY = 1000;
+
+/**
+ * 字体大小配置
+ */
+export const FONT_SIZE_CONFIG = {
+  small: '12px',
+  medium: '14px',
+  large: '16px',
+  xlarge: '18px'
+};
+
+/**
+ * 默认字体大小
+ */
+export const DEFAULT_FONT_SIZE = 'medium';
