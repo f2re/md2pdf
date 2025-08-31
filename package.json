@@ -2,21 +2,42 @@
   "name": "markdown-latex-pdf-converter",
   "version": "1.0.0",
   "description": "Convert Markdown files with LaTeX math to PDF, CLI tool",
-  "main": "md2pdf.js",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "convert": "node md2pdf.js"
+    "convert": "node md2pdf.js",
+    "dev": "node md2pdf.js",
+    "build": "echo 'No build step required for this project'",
+    "test": "echo 'No tests specified'"
   },
   "bin": {
     "md2pdf": "./md2pdf.js"
   },
+  "exports": {
+    ".": "./src/index.js",
+    "./converter": "./src/converter.js",
+    "./renderer": "./src/renderer.js",
+    "./utils": "./src/utils.js",
+    "./config": "./src/config.js",
+    "./template": "./src/template.js",
+    "./cli": "./src/cli.js"
+  },
+  "files": [
+    "src/",
+    "md2pdf.js",
+    "README.md",
+    "LICENSE"
+  ],
   "keywords": [
     "markdown",
     "latex", 
     "pdf",
     "katex",
     "converter",
-    "cli"
+    "cli",
+    "math",
+    "formula",
+    "document"
   ],
   "author": "Your Name",
   "license": "MIT",
