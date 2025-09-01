@@ -30,11 +30,27 @@ export const MARKDOWN_CONFIG = {
  * KaTeX 渲染配置
  */
 export const KATEX_CONFIG = {
+  // 在渲染器中会覆盖为 true，以便捕获错误并回退到 MathJax
   throwOnError: false,
   output: 'html',
   trust: false,
   strict: 'warn'
 };
+
+/**
+ * 数学渲染引擎配置
+ */
+export const MATH_ENGINE = {
+  AUTO: 'auto',      // 优先 KaTeX，失败回退 MathJax
+  KATEX: 'katex',    // 强制使用 KaTeX
+  MATHJAX: 'mathjax' // 强制使用 MathJax
+};
+
+export const DEFAULT_MATH_ENGINE = MATH_ENGINE.AUTO;
+
+/**
+ * MathJax CDN（v3，TeX-CHTML 输出）
+ */
 
 /**
  * Puppeteer 浏览器配置
@@ -71,6 +87,11 @@ export const PAGE_CONFIG = {
  * KaTeX 渲染等待时间
  */
 export const KATEX_RENDER_DELAY = 1000;
+
+/**
+ * MathJax 渲染等待时间
+ */
+// 纯本地 MathJax 渲染在 Node 侧完成，无需等待浏览器加载
 
 /**
  * 字体大小配置

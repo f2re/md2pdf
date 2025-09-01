@@ -2,7 +2,8 @@
  * HTML模板生成模块
  */
 
-import { CHINESE_FONT_CONFIG, FONT_WEIGHT_CONFIG, LINE_SPACING_CONFIG, PARAGRAPH_SPACING_CONFIG, MATH_SPACING_CONFIG } from './config.js';
+import { CHINESE_FONT_CONFIG, FONT_WEIGHT_CONFIG, LINE_SPACING_CONFIG, PARAGRAPH_SPACING_CONFIG, MATH_SPACING_CONFIG, MATH_ENGINE, DEFAULT_MATH_ENGINE } from './config.js';
+import { getMathJaxCss } from './mathjax.js';
 import { getLocalKatexCss } from './utils.js';
 
 /**
@@ -14,23 +15,27 @@ import { getLocalKatexCss } from './utils.js';
  * @returns {Promise<string>} 完整的HTML文档
  */
 export async function generateHtmlDocument(content, title = 'Markdown LaTeX Preview', options = {}) {
-  const katexCss = await getLocalKatexCss();
-  
-  return `<!DOCTYPE html>
+    const katexCss = await getLocalKatexCss();
+    const { mathEngine = DEFAULT_MATH_ENGINE } = options;
+    const needsMathJax = mathEngine === MATH_ENGINE.MATHJAX || mathEngine === MATH_ENGINE.AUTO;
+    const mathjaxCss = needsMathJax ? getMathJaxCss() : '';
+
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
 
-    <!-- KaTeX CSS - 本地资源 -->
+    <!-- KaTeX / MathJax CSS - 本地资源 -->
     <style>
         ${katexCss}
+        ${mathjaxCss}
         ${getCssStyles(options)}
     </style>
 </head>
 <body>
-    ${content}
+        ${content}
 </body>
 </html>`;
 }

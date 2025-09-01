@@ -5,6 +5,8 @@ Convert Markdown files with LaTeX math formulas to beautiful PDFs.
 ## Features
 
 - LaTeX math formulas (inline and block)
+- KaTeX local rendering (fonts inlined)
+- Auto fallback to MathJax when KaTeX fails (or force MathJax), fully local (no CDN)
 - Professional PDF formatting
 - Code syntax highlighting
 - **Font size customization (small, medium, large, xlarge or custom values)**
@@ -33,6 +35,13 @@ node md2pdf.js input.md output.pdf
 
 # HTML output
 node md2pdf.js input.md --format html
+
+# Choose math engine
+node md2pdf.js input.md output.pdf --math-engine auto     # default, KaTeX first, fallback to MathJax
+node md2pdf.js input.md output.pdf --math-engine katex    # force KaTeX (offline)
+node md2pdf.js input.md output.pdf --math-engine mathjax  # force MathJax (higher compatibility)
+
+# MathJax is rendered locally on Node side; no CDN needed
 
 # Custom margins
 node md2pdf.js input.md --margin 25mm
@@ -128,7 +137,8 @@ await converter.convert({
     fontWeight: 'medium',
     lineSpacing: 'loose',
     paragraphSpacing: '1.5em',
-    mathSpacing: '25px'
+  mathSpacing: '25px',
+  mathEngine: 'auto'
   }
 });
 
@@ -139,3 +149,7 @@ await converter.close();
 
 - **Inline**: `$E = mc^2$` or `\(E = mc^2\)`
 - **Block**: `$$E = mc^2$$` or `\[E = mc^2\]`
+
+### Fallback behavior
+- When KaTeX throws on unsupported commands, we render with MathJax (server-side) and embed CHTML directly.
+- No network required; PDF export only waits a small delay for layout stabilization.

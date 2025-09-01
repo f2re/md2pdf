@@ -66,8 +66,8 @@ export class MarkdownToPdfConverter {
       // 设置内容
       await page.setContent(html, PAGE_CONFIG);
 
-      // 等待 KaTeX 渲染完成
-      await page.waitForTimeout(KATEX_RENDER_DELAY);
+      // 等待渲染完成（KaTeX 已在 Node 侧完成，MathJax 也在 Node 侧完成）
+      await page.waitForTimeout(Math.max(KATEX_RENDER_DELAY, 300));
 
       // 生成 PDF
       const finalPdfOptions = {

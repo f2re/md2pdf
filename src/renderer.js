@@ -5,7 +5,8 @@
 import MarkdownIt from 'markdown-it';
 import katex from 'katex';
 import { escapeHtml, escapeRegExp } from './utils.js';
-import { MATH_DELIMITERS, MARKDOWN_CONFIG, KATEX_CONFIG, FONT_SIZE_CONFIG, DEFAULT_FONT_SIZE, CHINESE_FONT_CONFIG, DEFAULT_CHINESE_FONT, FONT_WEIGHT_CONFIG, DEFAULT_FONT_WEIGHT } from './config.js';
+import { MATH_DELIMITERS, MARKDOWN_CONFIG, KATEX_CONFIG, FONT_SIZE_CONFIG, DEFAULT_FONT_SIZE, CHINESE_FONT_CONFIG, DEFAULT_CHINESE_FONT, FONT_WEIGHT_CONFIG, DEFAULT_FONT_WEIGHT, MATH_ENGINE, DEFAULT_MATH_ENGINE } from './config.js';
+import { renderTeXToCHTML } from './mathjax.js';
 import { generateHtmlDocument, generateMathHtml } from './template.js';
 
 /**
@@ -88,15 +89,32 @@ export class MarkdownLatexRenderer {
    * @param {boolean} displayMode - 是否为块级显示模式
    * @returns {string} 渲染后的HTML
    */
-  renderMath(content, displayMode = false) {
+  renderMath(content, displayMode = false, mathEngine = DEFAULT_MATH_ENGINE) {
+    // 强制使用 MathJax：返回原始 TeX，以便后续由 MathJax 处理
+    if (mathEngine === MATH_ENGINE.MATHJAX) {
+      const { html } = renderTeXToCHTML(content, displayMode);
+      return html;
+    }
+
+    // 默认/KaTeX：先尝试 KaTeX，失败则回退为原始 TeX
     try {
       return katex.renderToString(content, {
         ...KATEX_CONFIG,
+        // 为了能捕获不支持的指令并回退到 MathJax，这里强制抛错
+        throwOnError: true,
         displayMode
       });
     } catch (error) {
-      console.warn('KaTeX rendering error:', error);
-      return displayMode ? `$$${content}$$` : `$${content}$`;
+      console.warn('KaTeX rendering error:', error?.message || error);
+      // 回退到本地 MathJax 渲染（服务端）
+      try {
+        const { html } = renderTeXToCHTML(content, displayMode);
+        return html;
+      } catch (err2) {
+        console.warn('MathJax fallback error:', err2?.message || err2);
+        // 最终保底：保留原始 TeX 文本
+        return displayMode ? `$$${content}$$` : `$${content}$`;
+      }
     }
   }
 
@@ -114,8 +132,9 @@ export class MarkdownLatexRenderer {
     let html = this.md.render(processedContent);
 
     // 3. 还原数学表达式
+    const engine = styleOptions.mathEngine || DEFAULT_MATH_ENGINE;
     for (const expr of mathExpressions) {
-      const renderedMath = this.renderMath(expr.content, expr.type === 'block');
+      const renderedMath = this.renderMath(expr.content, expr.type === 'block', engine);
       const mathHtml = generateMathHtml(renderedMath, expr.type === 'block');
       html = html.replace(expr.placeholder, mathHtml);
     }

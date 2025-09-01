@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import * as fs from 'fs/promises';
 import { fileExists } from './utils.js';
 import { convertMarkdownToPdf } from './converter.js';
+import { MATH_ENGINE, DEFAULT_MATH_ENGINE } from './config.js';
 
 /**
  * 为数值类型选项自动添加单位
@@ -85,7 +86,8 @@ export function createCLI() {
     .option('--font-weight <weight>', '文字厚度 (light|normal|medium|semibold|bold|black 或数值如 400)', 'normal')
     .option('--line-spacing <spacing>', '行间距 (tight|normal|loose|relaxed 或数值如 1.6)', 'normal')
     .option('--paragraph-spacing <spacing>', '段落间距 (tight|normal|loose|relaxed 或数值如 1em)', 'normal')
-    .option('--math-spacing <spacing>', '数学公式上下间距 (tight|normal|loose|relaxed 或数值如 20px)', 'normal')
+    .option('--math-spacing <spacing>', '数学公式上下间距 (tight|normal|loose|relaxed 或数值如 20px)', 'tight')
+    .option('--math-engine <engine>', '数学引擎 (auto|katex|mathjax)', DEFAULT_MATH_ENGINE)
     .action(async (input, output, options) => {
       await handleConvert(input, output, options);
     });
@@ -127,6 +129,9 @@ async function handleConvert(input, output, options) {
     console.log(chalk.gray(`📐 行间距: ${normalizedOptions.lineSpacing}`));
     console.log(chalk.gray(`📄 段落间距: ${normalizedOptions.paragraphSpacing}`));
     console.log(chalk.gray(`🧮 公式间距: ${normalizedOptions.mathSpacing}`));
+  if (normalizedOptions.mathEngine) {
+      console.log(chalk.gray(`🧠 数学引擎: ${normalizedOptions.mathEngine}`));
+    }
     if (normalizedOptions.landscape) {
       console.log(chalk.gray(`📱 页面方向: 横向`));
     }
@@ -152,7 +157,8 @@ async function handleConvert(input, output, options) {
       fontWeight: normalizedOptions.fontWeight,
       lineSpacing: normalizedOptions.lineSpacing,
       paragraphSpacing: normalizedOptions.paragraphSpacing,
-      mathSpacing: normalizedOptions.mathSpacing
+  mathSpacing: normalizedOptions.mathSpacing,
+  mathEngine: normalizedOptions.mathEngine
     };
 
     // 执行转换
@@ -174,7 +180,7 @@ async function handleConvert(input, output, options) {
 
   } catch (error) {
     console.error(chalk.red(`❌ 转换失败: ${error.message}`));
-    if (normalizedOptions.verbose) {
+    if (options && options.verbose) {
       console.error(chalk.gray(error.stack));
     }
     process.exit(1);
