@@ -44,6 +44,45 @@ function escapeRegExp(string) {
 }
 
 /**
+ * 自然排序函数 - 正确处理数字顺序
+ * @param {string} a - 第一个文件路径
+ * @param {string} b - 第二个文件路径
+ * @returns {number} 排序结果
+ */
+function naturalSort(a, b) {
+  // 提取文件名进行比较
+  const aName = path.basename(a);
+  const bName = path.basename(b);
+  
+  // 分割字符串和数字部分
+  const aParts = aName.split(/(\d+)/);
+  const bParts = bName.split(/(\d+)/);
+  
+  const maxLength = Math.max(aParts.length, bParts.length);
+  
+  for (let i = 0; i < maxLength; i++) {
+    const aPart = aParts[i] || '';
+    const bPart = bParts[i] || '';
+    
+    // 如果两个部分都是数字，按数值比较
+    if (/^\d+$/.test(aPart) && /^\d+$/.test(bPart)) {
+      const aNum = parseInt(aPart, 10);
+      const bNum = parseInt(bPart, 10);
+      if (aNum !== bNum) {
+        return aNum - bNum;
+      }
+    } else {
+      // 否则按字符串比较
+      if (aPart !== bPart) {
+        return aPart.localeCompare(bPart);
+      }
+    }
+  }
+  
+  return 0;
+}
+
+/**
  * 快速提取并检测数学公式（快速模式）
  * @param {string} content - Markdown内容
  * @returns {Array} 错误数组
@@ -271,7 +310,9 @@ async function getMarkdownFiles(folderPath, recursive = true) {
   }
   
   await scanDirectory(folderPath);
-  return markdownFiles;
+  
+  // 使用自然排序确保数字正确排序 (1, 2, 3, ..., 10, 11 而不是 1, 10, 11, 2, 3)
+  return markdownFiles.sort(naturalSort);
 }
 
 /**
@@ -331,7 +372,10 @@ function generateQuickReport(results) {
     console.log(chalk.red('\n💥 错误详情:'));
     console.log(chalk.red('============'));
     
-    errorFiles.forEach((result, index) => {
+    // 对错误文件按自然排序
+    const sortedErrorFiles = errorFiles.sort((a, b) => naturalSort(a.file, b.file));
+    
+    sortedErrorFiles.forEach((result, index) => {
       console.log(chalk.red(`\n${index + 1}. ${path.basename(result.file)}`));
       
       result.errors.forEach((error, errorIndex) => {
@@ -376,7 +420,10 @@ function generateDetailedReport(results) {
     console.log(chalk.red('\n💥 详细错误信息:'));
     console.log(chalk.red('=================='));
     
-    results.filter(r => !r.success).forEach((result, index) => {
+    // 对错误文件按自然排序
+    const sortedErrorFiles = results.filter(r => !r.success).sort((a, b) => naturalSort(a.file, b.file));
+    
+    sortedErrorFiles.forEach((result, index) => {
       console.log(chalk.red(`\n${index + 1}. ${path.basename(result.file)}`));
       console.log(chalk.gray(`   路径: ${result.file}`));
       
