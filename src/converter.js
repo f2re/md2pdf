@@ -34,7 +34,7 @@ export class MarkdownToPdfConverter {
     const markdownContent = await fs.readFile(input, 'utf-8');
     
     // 渲染为 HTML
-    const html = this.renderer.render(markdownContent, styleOptions);
+    const html = await this.renderer.render(markdownContent, styleOptions);
 
     if (format === 'html') {
       const outputPath = output || await getOutputPath(input, 'html');

@@ -24,27 +24,30 @@
   },
   "files": [
     "src/",
+    "assets/",
     "md2pdf.js",
     "README.md",
     "LICENSE"
   ],
   "keywords": [
     "markdown",
-    "latex", 
+    "latex",
     "pdf",
     "katex",
     "converter",
     "cli",
     "math",
     "formula",
-    "document"
+    "document",
+    "offline",
+    "local"
   ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
-    "katex": "^0.16.8",
+    "katex": "^0.16.22",
     "markdown-it": "^13.0.2",
     "puppeteer": "^21.5.2"
   }

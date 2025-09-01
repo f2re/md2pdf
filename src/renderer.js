@@ -104,9 +104,9 @@ export class MarkdownLatexRenderer {
    * 渲染 Markdown 内容为 HTML
    * @param {string} content - Markdown 内容
    * @param {Object} [styleOptions] - 样式选项
-   * @returns {string} 完整的 HTML 文档
+   * @returns {Promise<string>} 完整的 HTML 文档
    */
-  render(content, styleOptions = {}) {
+  async render(content, styleOptions = {}) {
     // 1. 处理数学表达式
     const { processedContent, mathExpressions } = this.processMathExpressions(content);
 
@@ -124,7 +124,7 @@ export class MarkdownLatexRenderer {
     const processedStyleOptions = this.processStyleOptions(styleOptions);
 
     // 5. 包装成完整的 HTML 文档
-    return generateHtmlDocument(html, 'Markdown LaTeX Preview', processedStyleOptions);
+    return await generateHtmlDocument(html, 'Markdown LaTeX Preview', processedStyleOptions);
   }
 
   /**

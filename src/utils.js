@@ -2,6 +2,15 @@
  * 通用工具函数模块
  */
 
+import * as fs from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { getLocalKatexCssWithInlineFonts } from './katex-assets.js';
+
+// 获取当前文件的目录路径
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 /**
  * HTML转义函数
  * @param {string} text - 需要转义的文本
@@ -45,11 +54,18 @@ export async function getOutputPath(inputPath, extension) {
  * @returns {Promise<boolean>} 文件是否存在
  */
 export async function fileExists(filePath) {
-  const fs = await import('fs/promises');
   try {
     await fs.stat(filePath);
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * 获取本地 KaTeX CSS 内容（使用内联字体）
+ * @returns {Promise<string>} KaTeX CSS 内容
+ */
+export async function getLocalKatexCss() {
+  return await getLocalKatexCssWithInlineFonts();
 }

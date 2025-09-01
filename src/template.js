@@ -3,6 +3,7 @@
  */
 
 import { CHINESE_FONT_CONFIG, FONT_WEIGHT_CONFIG, LINE_SPACING_CONFIG, PARAGRAPH_SPACING_CONFIG, MATH_SPACING_CONFIG } from './config.js';
+import { getLocalKatexCss } from './utils.js';
 
 /**
  * 生成完整的HTML文档
@@ -10,9 +11,11 @@ import { CHINESE_FONT_CONFIG, FONT_WEIGHT_CONFIG, LINE_SPACING_CONFIG, PARAGRAPH
  * @param {string} title - 文档标题
  * @param {Object} options - 生成选项
  * @param {string} options.fontSize - 字体大小
- * @returns {string} 完整的HTML文档
+ * @returns {Promise<string>} 完整的HTML文档
  */
-export function generateHtmlDocument(content, title = 'Markdown LaTeX Preview', options = {}) {
+export async function generateHtmlDocument(content, title = 'Markdown LaTeX Preview', options = {}) {
+  const katexCss = await getLocalKatexCss();
+  
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,10 +23,9 @@ export function generateHtmlDocument(content, title = 'Markdown LaTeX Preview', 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
 
-    <!-- KaTeX CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-
+    <!-- KaTeX CSS - 本地资源 -->
     <style>
+        ${katexCss}
         ${getCssStyles(options)}
     </style>
 </head>
