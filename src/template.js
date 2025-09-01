@@ -2,7 +2,7 @@
  * HTML模板生成模块
  */
 
-import { CHINESE_FONT_CONFIG, FONT_WEIGHT_CONFIG } from './config.js';
+import { CHINESE_FONT_CONFIG, FONT_WEIGHT_CONFIG, LINE_SPACING_CONFIG, PARAGRAPH_SPACING_CONFIG, MATH_SPACING_CONFIG } from './config.js';
 
 /**
  * 生成完整的HTML文档
@@ -39,10 +39,20 @@ export function generateHtmlDocument(content, title = 'Markdown LaTeX Preview', 
  * @param {string} options.fontSize - 字体大小
  * @param {string} options.chineseFont - 中文字体
  * @param {string} options.fontWeight - 文字厚度
+ * @param {string} options.lineSpacing - 行间距
+ * @param {string} options.paragraphSpacing - 段落间距
+ * @param {string} options.mathSpacing - 数学公式间距
  * @returns {string} CSS样式字符串
  */
 export function getCssStyles(options = {}) {
-  const { fontSize = '14px', chineseFont = 'auto', fontWeight = 'normal' } = options;
+  const { 
+    fontSize = '14px', 
+    chineseFont = 'auto', 
+    fontWeight = 'normal',
+    lineSpacing = 'normal',
+    paragraphSpacing = 'normal',
+    mathSpacing = 'normal'
+  } = options;
   
   /**
    * 将 px 转换为 pt (用于打印样式)
@@ -74,13 +84,40 @@ export function getCssStyles(options = {}) {
   function getFontWeight(fontWeightType) {
     return FONT_WEIGHT_CONFIG[fontWeightType] || fontWeightType;
   }
+
+  /**
+   * 获取行间距设置
+   * @param {string} lineSpacingType - 行间距类型
+   * @returns {string} 行间距CSS值
+   */
+  function getLineSpacing(lineSpacingType) {
+    return LINE_SPACING_CONFIG[lineSpacingType] || lineSpacingType;
+  }
+
+  /**
+   * 获取段落间距设置
+   * @param {string} paragraphSpacingType - 段落间距类型
+   * @returns {string} 段落间距CSS值
+   */
+  function getParagraphSpacing(paragraphSpacingType) {
+    return PARAGRAPH_SPACING_CONFIG[paragraphSpacingType] || paragraphSpacingType;
+  }
+
+  /**
+   * 获取数学公式间距设置
+   * @param {string} mathSpacingType - 数学公式间距类型
+   * @returns {string} 数学公式间距CSS值
+   */
+  function getMathSpacing(mathSpacingType) {
+    return MATH_SPACING_CONFIG[mathSpacingType] || mathSpacingType;
+  }
   
   return `
         /* 基础样式 */
         body {
             font-family: ${getFontFamily(chineseFont)};
             font-weight: ${getFontWeight(fontWeight)};
-            line-height: 1.6;
+            line-height: ${getLineSpacing(lineSpacing)};
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
@@ -89,9 +126,20 @@ export function getCssStyles(options = {}) {
             font-size: ${fontSize};
         }
 
+        /* 段落间距 */
+        p {
+            margin-top: 0;
+            margin-bottom: ${getParagraphSpacing(paragraphSpacing)};
+        }
+
+        /* 列表项间距 */
+        li {
+            margin-bottom: calc(${getParagraphSpacing(paragraphSpacing)} * 0.5);
+        }
+
         /* 数学公式样式 */
         .math-block {
-            margin: 20px 0;
+            margin: ${getMathSpacing(mathSpacing)} 0;
             text-align: center;
             overflow-x: auto;
         }
@@ -164,15 +212,16 @@ export function getCssStyles(options = {}) {
             padding: 0 16px;
             color: #6a737d;
             background-color: #f6f8fa;
-            margin: 20px 0;
+            margin: ${getParagraphSpacing(paragraphSpacing)} 0;
+            line-height: ${getLineSpacing(lineSpacing)};
         }
 
         /* 标题样式 */
         h1, h2, h3, h4, h5, h6 {
-            margin-top: 24px;
-            margin-bottom: 16px;
+            margin-top: calc(${getParagraphSpacing(paragraphSpacing)} * 1.5);
+            margin-bottom: ${getParagraphSpacing(paragraphSpacing)};
             font-weight: 600;
-            line-height: 1.25;
+            line-height: ${getLineSpacing(lineSpacing)};
         }
 
         h1 {

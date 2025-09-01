@@ -10,6 +10,9 @@ Convert Markdown files with LaTeX math formulas to beautiful PDFs.
 - **Font size customization (small, medium, large, xlarge or custom values)**
 - **Chinese font support (宋体、黑体、楷体、仿宋、微软雅黑等)**
 - **Font weight control (light, normal, medium, semibold, bold, black)**
+- **Line spacing control (tight, normal, loose, relaxed or custom values)**
+- **Paragraph spacing control (tight, normal, loose, relaxed or custom values)**
+- **Math formula spacing control (tight, normal, loose, relaxed or custom values)**
 - Modular architecture
 - CLI and programmatic usage
 
@@ -61,8 +64,29 @@ node md2pdf.js input.md --font-weight bold       # 粗体 (700)
 node md2pdf.js input.md --font-weight black      # 超粗体 (900)
 node md2pdf.js input.md --font-weight 600        # Custom weight
 
+# Line spacing options
+node md2pdf.js input.md --line-spacing tight     # 紧密行间距 (1.2)
+node md2pdf.js input.md --line-spacing normal    # 正常行间距 (1.6, default)
+node md2pdf.js input.md --line-spacing loose     # 宽松行间距 (2.0)
+node md2pdf.js input.md --line-spacing relaxed   # 极宽松行间距 (2.4)
+node md2pdf.js input.md --line-spacing 1.8       # Custom line height
+
+# Paragraph spacing options
+node md2pdf.js input.md --paragraph-spacing tight     # 紧密段落间距 (0.5em)
+node md2pdf.js input.md --paragraph-spacing normal    # 正常段落间距 (1em, default)
+node md2pdf.js input.md --paragraph-spacing loose     # 宽松段落间距 (1.5em)
+node md2pdf.js input.md --paragraph-spacing relaxed   # 极宽松段落间距 (2em)
+node md2pdf.js input.md --paragraph-spacing 1.2em     # Custom spacing
+
+# Math formula spacing options
+node md2pdf.js input.md --math-spacing tight     # 紧密公式间距 (10px)
+node md2pdf.js input.md --math-spacing normal    # 正常公式间距 (20px, default)
+node md2pdf.js input.md --math-spacing loose     # 宽松公式间距 (30px)
+node md2pdf.js input.md --math-spacing relaxed   # 极宽松公式间距 (40px)
+node md2pdf.js input.md --math-spacing 25px      # Custom spacing
+
 # Combined options
-node md2pdf.js input.md --font-size large --chinese-font yahei --font-weight semibold --margin 30mm
+node md2pdf.js input.md --font-size large --chinese-font yahei --font-weight semibold --line-spacing loose --paragraph-spacing relaxed --math-spacing loose --margin 30mm
 
 # Help
 node md2pdf.js --help
@@ -97,6 +121,14 @@ await converter.convert({
     format: 'A4',
     margin: { top: '25mm', bottom: '25mm' },
     landscape: false
+  },
+  styleOptions: {
+    fontSize: '16px',
+    chineseFont: 'yahei',
+    fontWeight: 'medium',
+    lineSpacing: 'loose',
+    paragraphSpacing: '1.5em',
+    mathSpacing: '25px'
   }
 });
 

@@ -120,3 +120,48 @@ export const FONT_WEIGHT_CONFIG = {
  * 默认文字厚度
  */
 export const DEFAULT_FONT_WEIGHT = 'normal';
+
+/**
+ * 行间距配置
+ */
+export const LINE_SPACING_CONFIG = {
+  tight: '1.2',
+  normal: '1.6', 
+  loose: '2.0',
+  relaxed: '2.4'
+};
+
+/**
+ * 默认行间距
+ */
+export const DEFAULT_LINE_SPACING = 'normal';
+
+/**
+ * 段落间距配置
+ */
+export const PARAGRAPH_SPACING_CONFIG = {
+  tight: '0.5em',
+  normal: '1em',
+  loose: '1.5em',
+  relaxed: '2em'
+};
+
+/**
+ * 默认段落间距
+ */
+export const DEFAULT_PARAGRAPH_SPACING = 'normal';
+
+/**
+ * 数学公式上下边距配置
+ */
+export const MATH_SPACING_CONFIG = {
+  tight: '10px',
+  normal: '20px',
+  loose: '30px',
+  relaxed: '40px'
+};
+
+/**
+ * 默认数学公式间距
+ */
+export const DEFAULT_MATH_SPACING = 'normal';

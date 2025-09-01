@@ -14,6 +14,9 @@ import { convertMarkdownToPdf } from './converter.js';
  * - margin: 纯数字自动添加 mm 单位
  * - fontSize: 纯数字自动添加 px 单位  
  * - fontWeight: 数值保持不变（CSS支持纯数字）
+ * - lineSpacing: 纯数字保持不变（line-height支持纯数字）
+ * - paragraphSpacing: 纯数字自动添加 em 单位
+ * - mathSpacing: 纯数字自动添加 px 单位
  * 
  * @param {Object} options - 原始选项对象
  * @returns {Object} 处理后的选项对象
@@ -33,7 +36,19 @@ function normalizeNumericOptions(options) {
     console.log(chalk.dim(`  🔧 自动添加单位: fontSize ${options.fontSize} → ${normalized.fontSize}`));
   }
   
-  // font-weight选项不需要添加单位，CSS支持纯数字和关键词
+  // 处理paragraph-spacing选项 - 如果是纯数字（整数或小数）则添加em单位
+  if (normalized.paragraphSpacing && /^(\d+|\d*\.\d+)$/.test(normalized.paragraphSpacing)) {
+    normalized.paragraphSpacing = normalized.paragraphSpacing + 'em';
+    console.log(chalk.dim(`  🔧 自动添加单位: paragraphSpacing ${options.paragraphSpacing} → ${normalized.paragraphSpacing}`));
+  }
+  
+  // 处理math-spacing选项 - 如果是纯数字（整数或小数）则添加px单位
+  if (normalized.mathSpacing && /^(\d+|\d*\.\d+)$/.test(normalized.mathSpacing)) {
+    normalized.mathSpacing = normalized.mathSpacing + 'px';
+    console.log(chalk.dim(`  🔧 自动添加单位: mathSpacing ${options.mathSpacing} → ${normalized.mathSpacing}`));
+  }
+  
+  // font-weight和line-spacing选项不需要添加单位，CSS支持纯数字和关键词
   
   return normalized;
 }
@@ -68,6 +83,9 @@ export function createCLI() {
     .option('--font-size <size>', '字体大小 (small|medium|large|xlarge 或具体数值如 14px)', 'medium')
     .option('--chinese-font <font>', '中文字体 (simsun|simhei|simkai|fangsong|yahei|auto)', 'auto')
     .option('--font-weight <weight>', '文字厚度 (light|normal|medium|semibold|bold|black 或数值如 400)', 'normal')
+    .option('--line-spacing <spacing>', '行间距 (tight|normal|loose|relaxed 或数值如 1.6)', 'normal')
+    .option('--paragraph-spacing <spacing>', '段落间距 (tight|normal|loose|relaxed 或数值如 1em)', 'normal')
+    .option('--math-spacing <spacing>', '数学公式上下间距 (tight|normal|loose|relaxed 或数值如 20px)', 'normal')
     .action(async (input, output, options) => {
       await handleConvert(input, output, options);
     });
@@ -106,6 +124,9 @@ async function handleConvert(input, output, options) {
     console.log(chalk.gray(`📏 页边距: ${normalizedOptions.margin}`));
     console.log(chalk.gray(`🇨🇳 中文字体: ${normalizedOptions.chineseFont}`));
     console.log(chalk.gray(`💪 文字厚度: ${normalizedOptions.fontWeight}`));
+    console.log(chalk.gray(`📐 行间距: ${normalizedOptions.lineSpacing}`));
+    console.log(chalk.gray(`📄 段落间距: ${normalizedOptions.paragraphSpacing}`));
+    console.log(chalk.gray(`🧮 公式间距: ${normalizedOptions.mathSpacing}`));
     if (normalizedOptions.landscape) {
       console.log(chalk.gray(`📱 页面方向: 横向`));
     }
@@ -128,7 +149,10 @@ async function handleConvert(input, output, options) {
     const styleOptions = {
       fontSize: normalizedOptions.fontSize,
       chineseFont: normalizedOptions.chineseFont,
-      fontWeight: normalizedOptions.fontWeight
+      fontWeight: normalizedOptions.fontWeight,
+      lineSpacing: normalizedOptions.lineSpacing,
+      paragraphSpacing: normalizedOptions.paragraphSpacing,
+      mathSpacing: normalizedOptions.mathSpacing
     };
 
     // 执行转换
