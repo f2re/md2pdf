@@ -137,8 +137,8 @@ await converter.convert({
     fontWeight: 'medium',
     lineSpacing: 'loose',
     paragraphSpacing: '1.5em',
-  mathSpacing: '25px',
-  mathEngine: 'auto'
+    mathSpacing: '25px',
+    mathEngine: 'auto'
   }
 });
 

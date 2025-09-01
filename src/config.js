@@ -34,7 +34,7 @@ export const KATEX_CONFIG = {
   throwOnError: false,
   output: 'html',
   trust: false,
-  strict: 'warn'
+  strict: false  // 完全禁用严格模式警告，包括Unicode字符警告
 };
 
 /**
@@ -57,7 +57,18 @@ export const DEFAULT_MATH_ENGINE = MATH_ENGINE.AUTO;
  */
 export const BROWSER_CONFIG = {
   headless: 'new',
-  args: ['--no-sandbox', '--disable-setuid-sandbox']
+  timeout: 0,  // 浏览器启动无超时限制
+  args: [
+    '--no-sandbox', 
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-extensions',
+    '--disable-gpu',
+    '--disable-background-timer-throttling',
+    '--disable-renderer-backgrounding',
+    '--disable-backgrounding-occluded-windows',
+    '--no-timeout'  // 禁用内部超时
+  ]
 };
 
 /**
@@ -80,13 +91,8 @@ export const PDF_CONFIG = {
  */
 export const PAGE_CONFIG = {
   waitUntil: ['load', 'networkidle0'],
-  timeout: 30000
+  timeout: 0  // 0 表示无超时限制
 };
-
-/**
- * KaTeX 渲染等待时间
- */
-export const KATEX_RENDER_DELAY = 1000;
 
 /**
  * MathJax 渲染等待时间

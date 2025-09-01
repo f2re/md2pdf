@@ -14,6 +14,10 @@ import { generateHtmlDocument, generateMathHtml } from './template.js';
  */
 export class MarkdownLatexRenderer {
   constructor() {
+    // 抑制KaTeX的控制台警告输出
+    this.originalConsoleWarn = console.warn;
+    this.suppressKatexWarnings();
+    
     // 初始化 markdown-it
     this.md = new MarkdownIt(MARKDOWN_CONFIG);
 
@@ -26,6 +30,34 @@ export class MarkdownLatexRenderer {
         return `<pre class="hljs"><code>${escapeHtml(str)}</code></pre>`;
       }
     });
+  }
+
+  /**
+   * 抑制KaTeX的控制台警告输出
+   */
+  suppressKatexWarnings() {
+    console.warn = (...args) => {
+      const message = args.join(' ');
+      // 过滤掉KaTeX相关的警告信息
+      if (message.includes('LaTeX-incompatible input') || 
+          message.includes('unicodeTextInMathMode') ||
+          message.includes('strict mode is set to') ||
+          message.includes('Unicode text character')) {
+        // 忽略这些警告
+        return;
+      }
+      // 其他警告正常输出
+      this.originalConsoleWarn.apply(console, args);
+    };
+  }
+
+  /**
+   * 恢复原始的console.warn
+   */
+  restoreConsoleWarn() {
+    if (this.originalConsoleWarn) {
+      console.warn = this.originalConsoleWarn;
+    }
   }
 
   /**
@@ -102,7 +134,9 @@ export class MarkdownLatexRenderer {
         ...KATEX_CONFIG,
         // 为了能捕获不支持的指令并回退到 MathJax，这里强制抛错
         throwOnError: true,
-        displayMode
+        displayMode,
+        // 明确禁用严格模式警告，避免Unicode字符警告
+        strict: false
       });
     } catch (error) {
       console.warn('KaTeX rendering error:', error?.message || error);
@@ -172,5 +206,12 @@ export class MarkdownLatexRenderer {
       chineseFont: chineseFont,
       fontWeight: actualFontWeight
     };
+  }
+
+  /**
+   * 清理资源，恢复console.warn
+   */
+  cleanup() {
+    this.restoreConsoleWarn();
   }
 }

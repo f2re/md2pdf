@@ -3,7 +3,7 @@
  */
 
 // 导出主要转换器类和函数
-export { MarkdownToPdfConverter, convertMarkdownToPdf, convertMarkdownToHtml } from './converter.js';
+export { MarkdownToPdfConverter, convertMarkdownToPdf, convertMarkdownToHtml, convertMarkdownBatch } from './converter.js';
 
 // 导出渲染器
 export { MarkdownLatexRenderer } from './renderer.js';
