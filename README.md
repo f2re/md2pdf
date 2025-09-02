@@ -7,6 +7,7 @@ Convert Markdown files with LaTeX math formulas to beautiful PDFs.
 - LaTeX math formulas (inline and block)
 - KaTeX local rendering (fonts inlined)
 - Auto fallback to MathJax when KaTeX fails (or force MathJax), fully local (no CDN)
+- **KaTeX formula validation and auto-correction with LLM integration**
 - Professional PDF formatting
 - Code syntax highlighting
 - **Font size customization (small, medium, large, xlarge or custom values)**
@@ -23,6 +24,62 @@ Convert Markdown files with LaTeX math formulas to beautiful PDFs.
 ```bash
 npm install
 ```
+
+## KaTeX Formula Validation
+
+Before converting your Markdown to PDF, you can validate and auto-correct LaTeX formulas using our KaTeX checker.
+
+### Basic Usage
+
+```bash
+# Check a single file
+node katex-check.js document.md
+
+# Check multiple files
+node katex-check.js file1.md file2.md file3.md
+
+# Check a directory
+node katex-check.js ./docs
+
+# Mixed mode (directory + files)
+node katex-check.js ./docs README.md CHANGELOG.md
+```
+
+### Advanced Options
+
+```bash
+# Quick check (no detailed error info)
+node katex-check.js document.md --quick
+
+# Detailed error information
+node katex-check.js document.md --detailed
+
+# Auto-fix with LLM (requires LMStudio)
+node katex-check.js document.md --auto-fix
+
+# Auto-fix with auto-confirmation
+node katex-check.js document.md --auto-fix --auto-confirm
+
+# Non-recursive directory scan
+node katex-check.js ./docs --no-recursive
+
+# Custom concurrency
+node katex-check.js ./docs --concurrency=8
+
+# Combined options
+node katex-check.js ./docs README.md --detailed --auto-fix --concurrency=4
+```
+
+### LLM Auto-Correction Setup
+
+The auto-correction feature requires LMStudio running locally:
+
+1. Install and run [LMStudio](https://lmstudio.ai/)
+2. Load a thinking model (e.g., `qwen/qwen3-4b-thinking-2507`)
+3. Start the local server at `http://localhost:1234`
+4. Use `--auto-fix` flag to enable auto-correction
+
+The LLM will analyze LaTeX errors and suggest corrections, which you can review and apply.
 
 ## CLI Usage
 
@@ -150,6 +207,27 @@ await converter.close();
 - **Inline**: `$E = mc^2$` or `\(E = mc^2\)`
 - **Block**: `$$E = mc^2$$` or `\[E = mc^2\]`
 
+### KaTeX Validation
+Before converting to PDF, use the KaTeX checker to validate your formulas:
+- Detects syntax errors and unsupported commands
+- Provides detailed error messages with line numbers
+- Supports auto-correction with LLM integration
+- Handles single files, multiple files, or entire directories
+
 ### Fallback behavior
 - When KaTeX throws on unsupported commands, we render with MathJax (server-side) and embed CHTML directly.
 - No network required; PDF export only waits a small delay for layout stabilization.
+
+## Project Structure
+
+```
+├── src/                    # Core conversion modules
+│   ├── cli.js             # Command-line interface
+│   ├── converter.js       # Main conversion logic
+│   ├── katex-assets.js    # KaTeX asset management
+│   └── ...
+├── katex-check.js         # KaTeX formula validator
+├── llm-fixer.js          # LLM auto-correction module
+├── md2pdf.js             # Main CLI entry point
+└── assets/katex/         # Local KaTeX assets
+```

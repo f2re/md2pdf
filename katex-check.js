@@ -11,6 +11,10 @@ import * as path from 'path';
 import katex from 'katex';
 import chalk from 'chalk';
 import { cpus } from 'os';
+import { 
+  fixSingleFormulaError, 
+  fixSingleDetailedFormulaError 
+} from './llm-fixer.js';
 
 /**
  * 数学公式分隔符配置
@@ -316,6 +320,49 @@ async function getMarkdownFiles(folderPath, recursive = true) {
 }
 
 /**
+ * 解析输入路径，支持文件夹、单个文件或多个文件
+ * @param {string} primaryPath - 主要路径（第一个参数）
+ * @param {Array} additionalPaths - 额外的路径数组
+ * @param {boolean} recursive - 是否递归搜索（仅对文件夹有效）
+ * @returns {Array} Markdown文件路径数组
+ */
+async function resolveInputPaths(primaryPath, additionalPaths = [], recursive = true) {
+  const allPaths = [primaryPath, ...additionalPaths];
+  const markdownFiles = [];
+  
+  for (const inputPath of allPaths) {
+    const resolvedPath = path.resolve(inputPath);
+    
+    try {
+      const stats = await fs.stat(resolvedPath);
+      
+      if (stats.isDirectory()) {
+        // 如果是目录，扫描其中的 Markdown 文件
+        const dirFiles = await getMarkdownFiles(resolvedPath, recursive);
+        markdownFiles.push(...dirFiles);
+        console.log(chalk.blue(`📁 扫描目录: ${resolvedPath} (找到 ${dirFiles.length} 个文件)`));
+      } else if (stats.isFile()) {
+        // 如果是文件，检查是否为 Markdown 文件
+        if (/\.md$/i.test(path.basename(resolvedPath))) {
+          markdownFiles.push(resolvedPath);
+          console.log(chalk.blue(`📄 添加文件: ${resolvedPath}`));
+        } else {
+          console.warn(chalk.yellow(`⚠️ 跳过非Markdown文件: ${resolvedPath}`));
+        }
+      } else {
+        console.warn(chalk.yellow(`⚠️ 跳过未知类型: ${resolvedPath}`));
+      }
+    } catch (error) {
+      console.error(chalk.red(`❌ 无法访问路径 ${resolvedPath}: ${error.message}`));
+    }
+  }
+  
+  // 去重并排序
+  const uniqueFiles = [...new Set(markdownFiles)];
+  return uniqueFiles.sort(naturalSort);
+}
+
+/**
  * 批量处理文件（详细模式使用）
  * @param {Array} files - 文件路径数组
  * @param {number} concurrency - 并发数
@@ -355,8 +402,9 @@ async function processFilesInBatches(files, concurrency, checkFunction) {
 /**
  * 生成快速报告
  * @param {Array} results - 检测结果数组
+ * @param {Object} config - 配置对象
  */
-function generateQuickReport(results) {
+async function generateQuickReport(results, config = {}) {
   const errorFiles = results.filter(r => !r.success);
   const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
   
@@ -375,18 +423,39 @@ function generateQuickReport(results) {
     // 对错误文件按自然排序
     const sortedErrorFiles = errorFiles.sort((a, b) => naturalSort(a.file, b.file));
     
-    sortedErrorFiles.forEach((result, index) => {
-      console.log(chalk.red(`\n${index + 1}. ${path.basename(result.file)}`));
+    let fixedCount = 0;
+    
+    for (let fileIndex = 0; fileIndex < sortedErrorFiles.length; fileIndex++) {
+      const result = sortedErrorFiles[fileIndex];
+      console.log(chalk.red(`\n${fileIndex + 1}. ${path.basename(result.file)}`));
       
-      result.errors.forEach((error, errorIndex) => {
+      for (let errorIndex = 0; errorIndex < result.errors.length; errorIndex++) {
+        const error = result.errors[errorIndex];
+        
         if (error.formula === 'FILE_ERROR') {
           console.log(chalk.yellow(`   文件错误: ${error.error}`));
-        } else {
-          console.log(chalk.yellow(`   公式 ${errorIndex + 1}: ${error.formula}`));
-          console.log(chalk.red(`   错误: ${error.error}`));
+          continue;
         }
-      });
-    });
+        
+        console.log(chalk.yellow(`   公式 ${errorIndex + 1}: ${error.formula}`));
+        console.log(chalk.red(`   错误: ${error.error}`));
+        
+        // 如果启用了自动纠错
+        if (config.autoFix) {
+          const fixed = await fixSingleFormulaError(error, result.file, {
+            autoConfirm: config.autoConfirm
+          });
+          if (fixed) {
+            fixedCount++;
+          }
+        }
+      }
+    }
+    
+    if (config.autoFix && fixedCount > 0) {
+      console.log(chalk.green(`\n🎉 成功修正了 ${fixedCount} 个公式错误！`));
+      console.log(chalk.yellow('💡 建议重新运行检测以确认修正结果'));
+    }
     
     return false; // 有错误
   } else {
@@ -399,7 +468,12 @@ function generateQuickReport(results) {
  * 生成详细报告
  * @param {Array} results - 检测结果数组
  */
-function generateDetailedReport(results) {
+/**
+ * 生成详细报告
+ * @param {Array} results - 检测结果数组
+ * @param {Object} config - 配置对象
+ */
+async function generateDetailedReport(results, config = {}) {
   const totalFiles = results.length;
   const successFiles = results.filter(r => r.success).length;
   const errorFiles = results.filter(r => !r.success).length;
@@ -423,18 +497,38 @@ function generateDetailedReport(results) {
     // 对错误文件按自然排序
     const sortedErrorFiles = results.filter(r => !r.success).sort((a, b) => naturalSort(a.file, b.file));
     
-    sortedErrorFiles.forEach((result, index) => {
-      console.log(chalk.red(`\n${index + 1}. ${path.basename(result.file)}`));
+    let fixedCount = 0;
+    
+    for (let fileIndex = 0; fileIndex < sortedErrorFiles.length; fileIndex++) {
+      const result = sortedErrorFiles[fileIndex];
+      console.log(chalk.red(`\n${fileIndex + 1}. ${path.basename(result.file)}`));
       console.log(chalk.gray(`   路径: ${result.file}`));
       
-      result.errors.forEach((error, errorIndex) => {
+      for (let errorIndex = 0; errorIndex < result.errors.length; errorIndex++) {
+        const error = result.errors[errorIndex];
         const expr = error.expression;
+        
         console.log(chalk.yellow(`   错误 ${errorIndex + 1}:`));
         console.log(chalk.yellow(`   类型: ${expr.type || 'unknown'}`));
         console.log(chalk.yellow(`   公式: ${expr.raw || expr.content || 'N/A'}`));
         console.log(chalk.red(`   错误: ${error.error.message}`));
-      });
-    });
+        
+        // 如果启用了自动纠错
+        if (config.autoFix && expr.raw && expr.raw !== 'FILE_READ_ERROR') {
+          const fixed = await fixSingleDetailedFormulaError(error, result.file, {
+            autoConfirm: config.autoConfirm
+          });
+          if (fixed) {
+            fixedCount++;
+          }
+        }
+      }
+    }
+    
+    if (config.autoFix && fixedCount > 0) {
+      console.log(chalk.green(`\n🎉 成功修正了 ${fixedCount} 个公式错误！`));
+      console.log(chalk.yellow('💡 建议重新运行检测以确认修正结果'));
+    }
   }
   
   // 成功率统计
@@ -458,11 +552,14 @@ function parseArguments() {
   
   const config = {
     folderPath: null,
+    filePaths: [],
     quick: false,
     detailed: false,
     recursive: true,
     concurrency: cpus().length,
-    help: false
+    help: false,
+    autoFix: false,
+    autoConfirm: false
   };
   
   for (let i = 0; i < args.length; i++) {
@@ -476,10 +573,19 @@ function parseArguments() {
       config.detailed = true;
     } else if (arg === '--no-recursive') {
       config.recursive = false;
+    } else if (arg === '--auto-fix' || arg === '-f') {
+      config.autoFix = true;
+    } else if (arg === '--auto-confirm' || arg === '-y') {
+      config.autoConfirm = true;
     } else if (arg.startsWith('--concurrency=')) {
       config.concurrency = parseInt(arg.split('=')[1]) || cpus().length;
-    } else if (!config.folderPath) {
-      config.folderPath = arg;
+    } else if (!arg.startsWith('-')) {
+      // 如果不是选项，则是文件/目录路径
+      if (!config.folderPath) {
+        config.folderPath = arg;
+      } else {
+        config.filePaths.push(arg);
+      }
     }
   }
   
@@ -498,26 +604,40 @@ function showHelp() {
   console.log(chalk.cyan('KaTeX渲染错误检测脚本 - 统一版'));
   console.log(chalk.cyan('================================'));
   console.log(chalk.blue('\n用法:'));
-  console.log(chalk.white('  node katex-unified-check.js <文件夹路径> [选项]'));
+  console.log(chalk.white('  node katex-check.js <路径> [更多路径...] [选项]'));
+  console.log(chalk.white(''));
+  console.log(chalk.white('  <路径> 可以是:'));
+  console.log(chalk.white('    • 文件夹路径 (扫描其中的 .md 文件)'));
+  console.log(chalk.white('    • 单个 .md 文件'));
+  console.log(chalk.white('    • 多个 .md 文件 (空格分隔)'));
   
   console.log(chalk.blue('\n模式选项:'));
   console.log(chalk.white('  --quick, -q        快速模式 (默认)'));
   console.log(chalk.white('  --detailed, -d     详细模式'));
   
+  console.log(chalk.blue('\n纠错选项:'));
+  console.log(chalk.white('  --auto-fix, -f     启用自动纠错功能'));
+  console.log(chalk.white('  --auto-confirm, -y 自动确认所有修正 (与 --auto-fix 配合使用)'));
+  
   console.log(chalk.blue('\n其他选项:'));
-  console.log(chalk.white('  --no-recursive     不递归搜索子目录'));
+  console.log(chalk.white('  --no-recursive     不递归搜索子目录 (仅对文件夹有效)'));
   console.log(chalk.white('  --concurrency=N    设置并发数 (默认: CPU核心数)'));
   console.log(chalk.white('  --help, -h         显示帮助信息'));
   
   console.log(chalk.blue('\n示例:'));
-  console.log(chalk.white('  node katex-unified-check.js ./docs                    # 快速模式'));
-  console.log(chalk.white('  node katex-unified-check.js ./docs --detailed         # 详细模式'));
-  console.log(chalk.white('  node katex-unified-check.js ./docs -d --concurrency=8 # 详细模式，8个并发'));
-  console.log(chalk.white('  node katex-unified-check.js ./docs -q --no-recursive  # 快速模式，不递归'));
+  console.log(chalk.white('  node katex-check.js ./docs                            # 扫描文件夹'));
+  console.log(chalk.white('  node katex-check.js README.md                         # 检查单个文件'));
+  console.log(chalk.white('  node katex-check.js file1.md file2.md file3.md        # 检查多个文件'));
+  console.log(chalk.white('  node katex-check.js ./docs README.md                  # 混合：文件夹+文件'));
+  console.log(chalk.white('  node katex-check.js ./docs --detailed                 # 详细模式'));
+  console.log(chalk.white('  node katex-check.js ./docs -f                         # 快速模式 + 纠错'));
+  console.log(chalk.white('  node katex-check.js file.md -f -y                     # 文件 + 自动纠错'));
+  console.log(chalk.white('  node katex-check.js ./docs -d -f --concurrency=8      # 详细模式 + 纠错'));
   
   console.log(chalk.blue('\n模式说明:'));
   console.log(chalk.white('  快速模式: 速度极快，简洁报告，适合日常使用'));
   console.log(chalk.white('  详细模式: 完整分析，详细报告，适合深度调试'));
+  console.log(chalk.white('  纠错功能: 使用 LMStudio API 自动修正错误的 LaTeX 公式'));
 }
 
 /**
@@ -532,42 +652,32 @@ async function main() {
   }
   
   if (!config.folderPath) {
-    console.error(chalk.red('❌ 请提供文件夹路径'));
+    console.error(chalk.red('❌ 请提供至少一个文件或文件夹路径'));
     showHelp();
     process.exit(1);
   }
   
-  const folderPath = path.resolve(config.folderPath);
-  
   try {
-    // 检查目录是否存在
-    try {
-      const stats = await fs.stat(folderPath);
-      if (!stats.isDirectory()) {
-        throw new Error('指定的路径不是文件夹');
-      }
-    } catch (error) {
-      throw new Error(`文件夹不存在或无法访问: ${error.message}`);
-    }
-    
     const mode = config.quick ? '快速' : '详细';
     console.log(chalk.cyan(`🚀 开始KaTeX渲染检测 (${mode}模式)...`));
-    console.log(chalk.blue(`📁 扫描目录: ${folderPath}`));
-    console.log(chalk.blue(`🔄 递归搜索: ${config.recursive ? '是' : '否'}`));
-    if (config.detailed) {
-      console.log(chalk.blue(`⚡ 并发数: ${config.concurrency}`));
+    if (config.autoFix) {
+      console.log(chalk.magenta(`🔧 纠错功能: 已启用 ${config.autoConfirm ? '(自动确认)' : '(手动确认)'}`));
     }
     
-    // 获取所有Markdown文件
-    console.log(chalk.cyan('\n📋 扫描Markdown文件...'));
-    const markdownFiles = await getMarkdownFiles(folderPath, config.recursive);
+    // 解析输入路径
+    console.log(chalk.cyan('\n📋 解析输入路径...'));
+    const markdownFiles = await resolveInputPaths(config.folderPath, config.filePaths, config.recursive);
     
     if (markdownFiles.length === 0) {
       console.log(chalk.yellow('⚠️ 未找到Markdown文件'));
       return;
     }
     
-    console.log(chalk.green(`✅ 找到 ${markdownFiles.length} 个Markdown文件`));
+    console.log(chalk.green(`\n✅ 总共找到 ${markdownFiles.length} 个Markdown文件`));
+    
+    if (config.detailed) {
+      console.log(chalk.blue(`⚡ 并发数: ${config.concurrency}`));
+    }
     
     // 开始检测
     console.log(chalk.cyan(`\n🔍 开始检测KaTeX渲染 (${mode}模式)...`));
@@ -579,11 +689,11 @@ async function main() {
     if (config.quick) {
       // 快速模式
       results = await Promise.all(markdownFiles.map(quickCheckFile));
-      hasNoErrors = generateQuickReport(results);
+      hasNoErrors = await generateQuickReport(results, config);
     } else {
       // 详细模式
       results = await processFilesInBatches(markdownFiles, config.concurrency, detailedCheckFile);
-      hasNoErrors = generateDetailedReport(results);
+      hasNoErrors = await generateDetailedReport(results, config);
     }
     
     const endTime = Date.now();
