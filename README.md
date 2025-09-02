@@ -67,7 +67,29 @@ node katex-check.js ./docs --no-recursive
 node katex-check.js ./docs --concurrency=8
 
 # Combined options
+# Auto-fix with LLM (requires LMStudio or Ollama)
 node katex-check.js ./docs README.md --detailed --auto-fix --concurrency=4
+```
+
+### LLM Auto-Correction Setup
+
+The auto-correction feature supports both LMStudio and Ollama:
+
+#### Option 1: LMStudio
+1. Install and run [LMStudio](https://lmstudio.ai/)
+2. Load a thinking model (e.g., `qwen/qwen3-4b-thinking-2507`)
+3. Start the local server at `http://localhost:1234`
+
+#### Option 2: Ollama (Recommended)
+1. Install [Ollama](https://ollama.ai/)
+2. Download a model: `ollama pull qwen2.5:7b`
+3. Start the service: `ollama serve` (runs on `http://localhost:11434`)
+
+The system will automatically detect available providers and use the best option. The LLM will analyze LaTeX errors and suggest corrections, which you can review and apply.
+
+**Supported Models:**
+- Ollama: `qwen2.5:7b`, `llama3.1:8b`, `gemma2:9b`, etc.
+- LMStudio: `qwen/qwen3-4b-thinking-2507`, etc.
 ```
 
 ### LLM Auto-Correction Setup
@@ -211,7 +233,7 @@ await converter.close();
 Before converting to PDF, use the KaTeX checker to validate your formulas:
 - Detects syntax errors and unsupported commands
 - Provides detailed error messages with line numbers
-- Supports auto-correction with LLM integration
+- Supports auto-correction with LLM integration (LMStudio & Ollama)
 - Handles single files, multiple files, or entire directories
 
 ### Fallback behavior
@@ -221,13 +243,15 @@ Before converting to PDF, use the KaTeX checker to validate your formulas:
 ## Project Structure
 
 ```
-├── src/                    # Core conversion modules
-│   ├── cli.js             # Command-line interface
-│   ├── converter.js       # Main conversion logic
-│   ├── katex-assets.js    # KaTeX asset management
+├── src/                         # Core conversion modules
+│   ├── cli.js                  # Command-line interface
+│   ├── converter.js            # Main conversion logic
+│   ├── katex-assets.js         # KaTeX asset management
 │   └── ...
-├── katex-check.js         # KaTeX formula validator
-├── llm-fixer.js          # LLM auto-correction module
-├── md2pdf.js             # Main CLI entry point
-└── assets/katex/         # Local KaTeX assets
+├── katex-check.js              # KaTeX formula validator
+├── llm-fixer.js               # LLM auto-correction module (LMStudio & Ollama)
+├── test-ollama-integration.js  # Ollama integration test
+├── md2pdf.js                  # Main CLI entry point
+├── OLLAMA_INTEGRATION_GUIDE.md # Ollama setup and usage guide
+└── assets/katex/              # Local KaTeX assets
 ```

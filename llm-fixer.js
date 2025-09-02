@@ -1,6 +1,6 @@
 /**
  * LLM 自动纠错模块
- * 负责调用 LMStudio API 修正 LaTeX 公式错误
+ * 负责调用 LMStudio 或 Ollama API 修正 LaTeX 公式错误
  */
 
 import readline from 'readline';
@@ -15,6 +15,23 @@ export const LMSTUDIO_CONFIG = {
   baseUrl: 'http://localhost:1234',
   model: 'qwen/qwen3-4b-thinking-2507',
   systemPrompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+};
+
+/**
+ * Ollama API 配置
+ */
+export const OLLAMA_CONFIG = {
+  baseUrl: 'http://localhost:11434',
+  model: 'qwen2.5:7b',
+  systemPrompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+};
+
+/**
+ * LLM 提供商类型
+ */
+export const LLM_PROVIDERS = {
+  LMSTUDIO: 'lmstudio',
+  OLLAMA: 'ollama'
 };
 
 /**
@@ -114,8 +131,81 @@ export async function callLMStudioAPI(formula, error) {
     
     return correctedFormula;
   } catch (error) {
-    console.error(chalk.red(`   ❌ API 调用失败: ${error.message}`));
+    console.error(chalk.red(`   ❌ LMStudio API 调用失败: ${error.message}`));
     return null;
+  }
+}
+
+/**
+ * 调用 Ollama API 修正 LaTeX 公式
+ * @param {string} formula - 错误的公式
+ * @param {string} error - 错误信息
+ * @returns {string|null} 修正后的公式或 null
+ */
+export async function callOllamaAPI(formula, error) {
+  try {
+    const prompt = `原始公式: ${formula}\n错误信息: ${error}`;
+    
+    const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OLLAMA_CONFIG.model,
+        messages: [
+          {
+            role: 'system',
+            content: OLLAMA_CONFIG.systemPrompt
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        stream: false
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    let correctedFormula = data.message?.content?.trim();
+    
+    if (!correctedFormula) {
+      throw new Error('API 返回为空');
+    }
+    
+    // 提取非思维链内容（去除 <think> 标签内的内容）
+    correctedFormula = extractNonThinkingContent(correctedFormula);
+    
+    if (!correctedFormula) {
+      throw new Error('提取最终答案后内容为空');
+    }
+    
+    return correctedFormula;
+  } catch (error) {
+    console.error(chalk.red(`   ❌ Ollama API 调用失败: ${error.message}`));
+    return null;
+  }
+}
+
+/**
+ * 统一的 LLM API 调用函数
+ * @param {string} formula - 错误的公式
+ * @param {string} error - 错误信息
+ * @param {string} provider - LLM 提供商 ('lmstudio' 或 'ollama')
+ * @returns {string|null} 修正后的公式或 null
+ */
+export async function callLLMAPI(formula, error, provider = LLM_PROVIDERS.LMSTUDIO) {
+  switch (provider) {
+    case LLM_PROVIDERS.OLLAMA:
+      return await callOllamaAPI(formula, error);
+    case LLM_PROVIDERS.LMSTUDIO:
+    default:
+      return await callLMStudioAPI(formula, error);
   }
 }
 
@@ -239,15 +329,15 @@ export function buildCorrectedFormula(originalFormula, correctedContent) {
  * @returns {boolean} 是否成功修正
  */
 export async function fixSingleFormulaError(error, filePath, config = {}) {
-  const { autoConfirm = false } = config;
+  const { autoConfirm = false, provider = LLM_PROVIDERS.LMSTUDIO } = config;
   
   console.log(chalk.cyan('   🔧 正在尝试自动修正...'));
   
   // 提取公式内容
   const formulaContent = error.content || extractFormulaContent(error.formula);
   
-  // 调用 LMStudio API
-  const correctedFormula = await callLMStudioAPI(formulaContent, error.error);
+  // 调用 LLM API
+  const correctedFormula = await callLLMAPI(formulaContent, error.error, provider);
   
   if (!correctedFormula) {
     return false;
@@ -292,7 +382,7 @@ export async function fixSingleFormulaError(error, filePath, config = {}) {
  * @returns {boolean} 是否成功修正
  */
 export async function fixSingleDetailedFormulaError(error, filePath, config = {}) {
-  const { autoConfirm = false } = config;
+  const { autoConfirm = false, provider = LLM_PROVIDERS.LMSTUDIO } = config;
   
   const expr = error.expression;
   
@@ -308,8 +398,8 @@ export async function fixSingleDetailedFormulaError(error, filePath, config = {}
     formulaContent = extractFormulaContent(expr.raw);
   }
   
-  // 调用 LMStudio API
-  const correctedFormula = await callLMStudioAPI(formulaContent, error.error.message);
+  // 调用 LLM API
+  const correctedFormula = await callLLMAPI(formulaContent, error.error.message, provider);
   
   if (!correctedFormula) {
     return false;
@@ -342,4 +432,58 @@ export async function fixSingleDetailedFormulaError(error, filePath, config = {}
     console.log(chalk.gray(`   ↩️ 跳过修正`));
     return false;
   }
+}
+
+/**
+ * 检测 LLM 提供商的可用性
+ * @param {string} provider - LLM 提供商
+ * @returns {boolean} 是否可用
+ */
+export async function checkLLMProviderAvailability(provider) {
+  try {
+    let url;
+    switch (provider) {
+      case LLM_PROVIDERS.OLLAMA:
+        url = `${OLLAMA_CONFIG.baseUrl}/api/tags`;
+        break;
+      case LLM_PROVIDERS.LMSTUDIO:
+      default:
+        url = `${LMSTUDIO_CONFIG.baseUrl}/v1/models`;
+        break;
+    }
+    
+    const response = await fetch(url, { 
+      method: 'GET',
+      signal: AbortSignal.timeout(5000) // 5秒超时
+    });
+    
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * 自动选择可用的 LLM 提供商
+ * @param {string} preferredProvider - 首选提供商
+ * @returns {string} 可用的提供商
+ */
+export async function selectAvailableLLMProvider(preferredProvider = LLM_PROVIDERS.LMSTUDIO) {
+  // 首先检查首选提供商
+  if (await checkLLMProviderAvailability(preferredProvider)) {
+    console.log(chalk.green(`   ✅ 使用 ${preferredProvider.toUpperCase()} 提供商`));
+    return preferredProvider;
+  }
+  
+  // 如果首选提供商不可用，尝试其他提供商
+  const providers = Object.values(LLM_PROVIDERS);
+  for (const provider of providers) {
+    if (provider !== preferredProvider && await checkLLMProviderAvailability(provider)) {
+      console.log(chalk.yellow(`   ⚠️ ${preferredProvider.toUpperCase()} 不可用，切换到 ${provider.toUpperCase()}`));
+      return provider;
+    }
+  }
+  
+  console.log(chalk.red(`   ❌ 所有 LLM 提供商都不可用`));
+  return null;
 }
