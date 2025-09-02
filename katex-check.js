@@ -12,22 +12,31 @@ function advancedSyntaxCheck(content) {
   const warnings = [];
   
   // 检查1: 单行数学环境中的多行数学环境
-  const inlineMathWithGather = /\$[^$]*\\begin\{gather\*?\}.*?\\end\{gather\*?\}[^$]*\$/g;
-  if (inlineMathWithGather.test(content)) {
-    warnings.push({
-      type: 'environment_mismatch',
-      message: '单行数学环境($...$)中包含多行数学环境(gather*)',
-      suggestion: '使用 $$...$$'
+  // 先找到所有的单$公式（排除$$），然后检查其中是否包含gather环境
+  const singleDollarMatches = content.match(/(?:^|[^$])\$([^$]+?)\$(?:[^$]|$)/g);
+  if (singleDollarMatches) {
+    singleDollarMatches.forEach(match => {
+      if (/\\begin\{gather\*?\}.*?\\end\{gather\*?\}/s.test(match)) {
+        warnings.push({
+          type: 'environment_mismatch',
+          message: '单行数学环境($...$)中包含多行数学环境(gather*)',
+          suggestion: '使用 $$...$$'
+        });
+      }
     });
   }
   
   // 检查2: 单行数学环境中的 aligned 环境
-  const inlineMathWithAligned = /\$[^$]*\\begin\{aligned\}.*?\\end\{aligned\}[^$]*\$/g;
-  if (inlineMathWithAligned.test(content)) {
-    warnings.push({
-      type: 'environment_mismatch', 
-      message: '单行数学环境($...$)中包含aligned环境',
-      suggestion: '使用 $$...$$'
+  // 先找到所有的单$公式（排除$$），然后检查其中是否包含aligned环境
+  if (singleDollarMatches) {
+    singleDollarMatches.forEach(match => {
+      if (/\\begin\{aligned\}.*?\\end\{aligned\}/s.test(match)) {
+        warnings.push({
+          type: 'environment_mismatch', 
+          message: '单行数学环境($...$)中包含aligned环境',
+          suggestion: '使用 $$...$$'
+        });
+      }
     });
   }
   
@@ -180,9 +189,9 @@ function quickCheckMath(content) {
   
   // 匹配所有可能的数学公式
   const patterns = [
-    /\$\$([^$]+?)\$\$/g,           // 块级公式 $$...$$
-    /\\\[([^\]]+?)\\\]/g,          // 块级公式 \[...\]
-    /\$([^$\n]+?)\$/g,             // 行内公式 $...$
+    /\$\$([\s\S]*?)\$\$/g,         // 块级公式 $$...$$（允许多行）
+    /\\\[([\s\S]*?)\\\]/g,         // 块级公式 \[...\]（允许多行）
+    /\$([^$\n]+?)\$/g,             // 行内公式 $...$（单行）
     /\\\(([^)]+?)\\\)/g            // 行内公式 \(...\)
   ];
   
