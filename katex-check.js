@@ -3,7 +3,91 @@
 /**
  * 统一KaTeX渲染错误检测脚本
  * 支持快速模式和详细模式
- * 用法: node katex-unified-check.js <文件夹路径> [选项]
+ * 用法: node katex-unifie/**
+ * 高级语法检查 - 检测可能导致PDF转换失败的复杂语法
+ * @param {string} content - 数学公式内容
+ * @returns {Array} 警告信息数组
+ */
+function advancedSyntaxCheck(content) {
+  const warnings = [];
+  
+  // 检查1: 单行数学环境中的多行数学环境
+  const inlineMathWithGather = /\$[^$]*\\begin\{gather\*?\}.*?\\end\{gather\*?\}[^$]*\$/g;
+  if (inlineMathWithGather.test(content)) {
+    warnings.push({
+      type: 'environment_mismatch',
+      message: '单行数学环境($...$)中包含多行数学环境(gather*)',
+      suggestion: '使用 $$...$$'
+    });
+  }
+  
+  // 检查2: 单行数学环境中的 aligned 环境
+  const inlineMathWithAligned = /\$[^$]*\\begin\{aligned\}.*?\\end\{aligned\}[^$]*\$/g;
+  if (inlineMathWithAligned.test(content)) {
+    warnings.push({
+      type: 'environment_mismatch', 
+      message: '单行数学环境($...$)中包含aligned环境',
+      suggestion: '使用 $$...$$'
+    });
+  }
+  
+  // 检查3: array环境列数不一致
+  const arrayMatches = content.match(/\\begin\{array\}\{([^}]+)\}(.*?)\\end\{array\}/gs);
+  if (arrayMatches) {
+    arrayMatches.forEach(arrayMatch => {
+      const colSpec = arrayMatch.match(/\\begin\{array\}\{([^}]+)\}/)[1];
+      const expectedCols = colSpec.length;
+      const rows = arrayMatch.split('\\\\').slice(0, -1); // 排除最后一个空元素
+      
+      rows.forEach((row, index) => {
+        const cells = row.split('&').length;
+        if (cells !== expectedCols && cells > 1) {
+          warnings.push({
+            type: 'array_column_mismatch',
+            message: `数组第${index + 1}行有${cells}列，但定义了${expectedCols}列`,
+            suggestion: '检查数组列数一致性'
+          });
+        }
+      });
+    });
+  }
+  
+  // 检查4: 不支持的命令
+  const unsupportedCommands = [
+    '\\multicolumn',
+    '\\multirow', 
+    '\\cline',
+    '\\hline',
+    '\\centering',
+    '\\raggedright',
+    '\\raggedleft'
+  ];
+  
+  unsupportedCommands.forEach(cmd => {
+    if (content.includes(cmd)) {
+      warnings.push({
+        type: 'unsupported_command',
+        message: `使用了可能不兼容的命令: ${cmd}`,
+        suggestion: '考虑使用KaTeX支持的替代方案'
+      });
+    }
+  });
+  
+  // 检查5: 复杂嵌套环境
+  const complexNesting = /\\begin\{gather\*?\}.*?\\begin\{aligned\}.*?\\begin\{array\}/gs;
+  if (complexNesting.test(content)) {
+    warnings.push({
+      type: 'complex_nesting',
+      message: '检测到复杂的数学环境嵌套(gather* + aligned + array)',
+      suggestion: '考虑简化数学环境结构'
+    });
+  }
+  
+  return warnings;
+}
+
+/**
+ * 快速提取并检查数学公式（快速模式）check.js <文件夹路径> [选项]
  */
 
 import * as fs from 'fs/promises';
@@ -110,6 +194,7 @@ function quickCheckMath(content) {
       const mathContent = match[1].trim();
       if (!mathContent) continue;
       
+      // 基础 KaTeX 语法检查
       try {
         katex.renderToString(mathContent, {
           throwOnError: true,
@@ -125,7 +210,22 @@ function quickCheckMath(content) {
           position: match.index,
           type: isBlock ? 'block' : 'inline'
         });
+        continue; // KaTeX 错误时跳过高级检查
       }
+      
+      // 高级语法检查 - 检测可能导致PDF转换失败的问题
+      const warnings = advancedSyntaxCheck(match[0]);
+      warnings.forEach(warning => {
+        errors.push({
+          formula: match[0],
+          content: mathContent,
+          error: `⚠️ ${warning.message}`,
+          suggestion: warning.suggestion,
+          position: match.index,
+          type: isBlock ? 'block' : 'inline',
+          severity: 'warning'
+        });
+      });
     }
   });
   
@@ -195,27 +295,37 @@ function extractMathExpressions(content) {
  * @returns {Object} 检测结果
  */
 function checkMathExpression(mathExpr) {
+  const result = {
+    success: true,
+    expression: mathExpr,
+    error: null,
+    warnings: []
+  };
+  
+  // 基础 KaTeX 语法检查
   try {
     katex.renderToString(mathExpr.content, {
       ...KATEX_CONFIG,
       displayMode: mathExpr.type === 'block'
     });
-    
-    return {
-      success: true,
-      expression: mathExpr,
-      error: null
-    };
   } catch (error) {
-    return {
-      success: false,
-      expression: mathExpr,
-      error: {
-        message: error.message,
-        name: error.name
-      }
+    result.success = false;
+    result.error = {
+      message: error.message,
+      name: error.name
     };
+    return result; // KaTeX 错误时直接返回，不进行高级检查
   }
+  
+  // 高级语法检查 - 检测可能导致PDF转换失败的问题
+  const warnings = advancedSyntaxCheck(mathExpr.raw);
+  if (warnings.length > 0) {
+    result.warnings = warnings;
+    // 即使有警告，基础语法正确时仍然认为是成功的
+    // 但会在报告中显示警告信息
+  }
+  
+  return result;
 }
 
 /**
@@ -228,10 +338,15 @@ async function quickCheckFile(filePath) {
     const content = await fs.readFile(filePath, 'utf-8');
     const errors = quickCheckMath(content);
     
+    // 区分真正的错误和警告
+    const realErrors = errors.filter(error => error.severity !== 'warning');
+    const warnings = errors.filter(error => error.severity === 'warning');
+    
     return {
       file: filePath,
-      success: errors.length === 0,
-      errors: errors,
+      success: realErrors.length === 0, // 只有真正的错误才影响成功状态
+      errors: realErrors,
+      warnings: warnings,
       mathCount: errors.length
     };
   } catch (error) {
@@ -239,6 +354,7 @@ async function quickCheckFile(filePath) {
       file: filePath,
       success: false,
       errors: [{ formula: 'FILE_ERROR', error: error.message }],
+      warnings: [],
       mathCount: 0
     };
   }
@@ -259,17 +375,21 @@ async function detailedCheckFile(filePath) {
         file: filePath,
         mathCount: 0,
         errors: [],
+        warnings: [],
         success: true
       };
     }
 
     const results = mathExpressions.map(checkMathExpression);
     const errors = results.filter(result => !result.success);
+    const warnings = results.filter(result => result.success && result.warnings && result.warnings.length > 0)
+                            .reduce((allWarnings, result) => allWarnings.concat(result.warnings), []);
     
     return {
       file: filePath,
       mathCount: mathExpressions.length,
       errors: errors,
+      warnings: warnings,
       success: errors.length === 0
     };
   } catch (error) {
@@ -281,6 +401,7 @@ async function detailedCheckFile(filePath) {
         expression: { raw: 'FILE_READ_ERROR' },
         error: { message: error.message, name: 'FileReadError' }
       }],
+      warnings: [],
       success: false
     };
   }
@@ -407,6 +528,7 @@ async function processFilesInBatches(files, concurrency, checkFunction) {
 async function generateQuickReport(results, config = {}) {
   const errorFiles = results.filter(r => !r.success);
   const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
+  const totalWarnings = results.reduce((sum, r) => sum + (r.warnings ? r.warnings.length : 0), 0);
   
   console.log(chalk.cyan('\n📋 检测结果'));
   console.log(chalk.cyan('============'));
@@ -414,6 +536,10 @@ async function generateQuickReport(results, config = {}) {
   console.log(chalk.green(`✅ 正常文件: ${results.length - errorFiles.length}`));
   console.log(chalk.red(`❌ 错误文件: ${errorFiles.length}`));
   console.log(chalk.red(`💥 错误总数: ${totalErrors}`));
+  
+  if (totalWarnings > 0) {
+    console.log(chalk.yellow(`⚠️ 语法警告: ${totalWarnings}`));
+  }
   
   // 显示错误详情
   if (errorFiles.length > 0) {
@@ -456,11 +582,43 @@ async function generateQuickReport(results, config = {}) {
       console.log(chalk.green(`\n🎉 成功修正了 ${fixedCount} 个公式错误！`));
       console.log(chalk.yellow('💡 建议重新运行检测以确认修正结果'));
     }
+  }
+  
+  // 显示警告信息（如果有的话）
+  const warningFiles = results.filter(r => r.warnings && r.warnings.length > 0);
+  if (warningFiles.length > 0) {
+    console.log(chalk.yellow('\n⚠️ 语法警告:'));
+    console.log(chalk.yellow('============'));
     
-    return false; // 有错误
-  } else {
+    const sortedWarningFiles = warningFiles.sort((a, b) => naturalSort(a.file, b.file));
+    
+    for (let fileIndex = 0; fileIndex < sortedWarningFiles.length; fileIndex++) {
+      const result = sortedWarningFiles[fileIndex];
+      console.log(chalk.yellow(`\n${fileIndex + 1}. ${path.basename(result.file)}`));
+      
+      for (let warningIndex = 0; warningIndex < result.warnings.length; warningIndex++) {
+        const warning = result.warnings[warningIndex];
+        console.log(chalk.yellow(`   ⚠️ 警告 ${warningIndex + 1}: ${warning.formula || '公式'}`));
+        console.log(chalk.yellow(`   问题: ${warning.error}`));
+        if (warning.suggestion) {
+          console.log(chalk.cyan(`   建议: ${warning.suggestion}`));
+        }
+      }
+    }
+    
+    console.log(chalk.yellow('\n💡 这些警告可能导致PDF转换失败，建议修复'));
+  }
+  
+  // 总结
+  if (errorFiles.length === 0 && totalWarnings === 0) {
     console.log(chalk.green('\n🎉 所有文件的KaTeX公式都正常！'));
-    return true; // 无错误
+    return true;
+  } else if (errorFiles.length === 0) {
+    console.log(chalk.yellow('\n✅ 所有KaTeX公式语法正确！'));
+    console.log(chalk.yellow('⚠️ 但发现一些可能影响PDF转换的警告'));
+    return true; // 只有警告时仍然返回成功
+  } else {
+    return false; // 有真正的错误
   }
 }
 
@@ -489,6 +647,14 @@ async function generateDetailedReport(results, config = {}) {
   console.log(chalk.red(`❌ 错误文件数: ${errorFiles}`));
   console.log(chalk.blue(`🧮 数学公式总数: ${totalMathExpressions}`));
   console.log(chalk.red(`💥 渲染错误总数: ${totalErrors}`));
+  
+  // 统计警告数量
+  const warningFiles = results.filter(r => r.success && r.warnings && r.warnings.length > 0).length;
+  const totalWarnings = results.reduce((sum, r) => sum + ((r.warnings && r.warnings.length) || 0), 0);
+  
+  if (totalWarnings > 0) {
+    console.log(chalk.yellow(`⚠️ 语法警告总数: ${totalWarnings}`));
+  }
   
   if (errorFiles > 0) {
     console.log(chalk.red('\n💥 详细错误信息:'));
@@ -531,13 +697,42 @@ async function generateDetailedReport(results, config = {}) {
     }
   }
   
+  // 显示警告信息
+  if (warningFiles > 0) {
+    console.log(chalk.yellow('\n⚠️ 语法警告信息:'));
+    console.log(chalk.yellow('=================='));
+    
+    const sortedWarningFiles = results.filter(r => r.success && r.warnings && r.warnings.length > 0)
+      .sort((a, b) => naturalSort(a.file, b.file));
+    
+    for (let fileIndex = 0; fileIndex < sortedWarningFiles.length; fileIndex++) {
+      const result = sortedWarningFiles[fileIndex];
+      console.log(chalk.yellow(`\n${fileIndex + 1}. ${path.basename(result.file)}`));
+      console.log(chalk.gray(`   路径: ${result.file}`));
+      
+      for (let warningIndex = 0; warningIndex < result.warnings.length; warningIndex++) {
+        const warning = result.warnings[warningIndex];
+        console.log(chalk.yellow(`   警告 ${warningIndex + 1}:`));
+        console.log(chalk.yellow(`   类型: ${warning.type}`));
+        console.log(chalk.yellow(`   问题: ${warning.message}`));
+        console.log(chalk.cyan(`   建议: ${warning.suggestion}`));
+      }
+    }
+    
+    console.log(chalk.yellow('\n💡 这些警告可能导致PDF转换失败，建议修复'));
+  }
+  
   // 成功率统计
   const successRate = totalFiles > 0 ? Math.round((successFiles / totalFiles) * 100) : 100;
   console.log(chalk.cyan(`\n📊 成功率: ${successRate}%`));
   
-  if (successRate === 100) {
+  if (successRate === 100 && totalWarnings === 0) {
     console.log(chalk.green('🎉 所有文件的KaTeX公式都能正确渲染！'));
     return true;
+  } else if (successRate === 100) {
+    console.log(chalk.yellow('✅ 所有KaTeX公式语法正确！'));
+    console.log(chalk.yellow('⚠️ 但发现一些可能影响PDF转换的警告'));
+    return true; // 只有警告时仍然返回成功
   } else {
     console.log(chalk.yellow('⚠️ 发现渲染错误，请检查上述详细信息'));
     return false;
