@@ -113,16 +113,56 @@ async function cleanupTempFile(tempPath) {
 }
 
 /**
+ * 显示帮助信息
+ */
+function showHelp() {
+  console.log(chalk.cyan.bold(`
+┌──────────────────────────────────────────┐
+│  📄 Markdown 文件合并转换工具            │
+│  🔗 合并文件夹中的所有Markdown文件       │
+│  📄 转换为单一PDF文档                    │
+└──────────────────────────────────────────┘
+`));
+  
+  console.log(chalk.blue('用法:'));
+  console.log(chalk.white('  node merge-md-to-pdf.js <文件夹路径> [输出文件名]'));
+  
+  console.log(chalk.blue('\n参数:'));
+  console.log(chalk.white('  <文件夹路径>     包含Markdown文件的文件夹路径 (必需)'));
+  console.log(chalk.white('  [输出文件名]     输出PDF文件名 (可选, 默认: merged-document.pdf)'));
+  
+  console.log(chalk.blue('\n选项:'));
+  console.log(chalk.white('  --help, -h       显示帮助信息'));
+  
+  console.log(chalk.blue('\n示例:'));
+  console.log(chalk.white('  node merge-md-to-pdf.js ./docs'));
+  console.log(chalk.white('  node merge-md-to-pdf.js ./docs combined.pdf'));
+  console.log(chalk.white('  node merge-md-to-pdf.js "C:\\Documents\\MyProject" output.pdf'));
+  
+  console.log(chalk.blue('\n默认样式:'));
+  console.log(chalk.white('  📏 页边距: 0mm (无边距)'));
+  console.log(chalk.white('  🔤 字体大小: large'));
+  console.log(chalk.white('  🇨🇳 中文字体: auto'));
+  console.log(chalk.white('  💪 文字厚度: medium'));
+  console.log(chalk.white('  📐 行间距: normal'));
+  console.log(chalk.white('  📄 段落间距: normal'));
+  console.log(chalk.white('  🧮 数学间距: tight'));
+}
+
+/**
  * 主函数
  */
 async function main() {
   const args = process.argv.slice(2);
   
-  if (args.length === 0) {
-    console.error(chalk.red('❌ 请提供文件夹路径'));
-    console.log(chalk.blue('用法: node merge-md-to-pdf.js <文件夹路径> [输出文件名]'));
-    console.log(chalk.blue('示例: node merge-md-to-pdf.js ./docs merged-document.pdf'));
-    process.exit(1);
+  // 检查帮助参数
+  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
+    showHelp();
+    if (args.length === 0) {
+      process.exit(1);
+    } else {
+      process.exit(0);
+    }
   }
   
   const folderPath = path.resolve(args[0]);
@@ -167,7 +207,7 @@ async function main() {
     // 3. 写入临时文件
     await writeTempFile(mergedContent, tempMarkdownPath);
     
-    // 4. 转换为PDF（使用性能优化的转换器）
+    // 4. 转换为PDF（使用CLI中的默认样式选项）
     console.log(chalk.cyan('📄 转换为PDF...'));
     const converter = new MarkdownToPdfConverter({
       reuseInstance: true,  // 启用实例复用以提高性能
@@ -181,18 +221,23 @@ async function main() {
       pdfOptions: {
         format: 'A4',
         margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm'
+          top: '0mm',
+          right: '0mm',
+          bottom: '0mm',
+          left: '0mm'
         },
         printBackground: true,
         preferCSSPageSize: true
       },
       styleOptions: {
-        fontSize: '12pt',
-        lineHeight: 1.6
-        // 移除 pageBreak: true，让内容自然流动
+        // 使用CLI默认的样式选项
+        fontSize: 'large',           // 对应CLI默认的 --font-size large
+        chineseFont: 'auto',         // 对应CLI默认的 --chinese-font auto
+        fontWeight: 'medium',        // 对应CLI默认的 --font-weight medium
+        lineSpacing: 'normal',       // 对应CLI默认的 --line-spacing normal
+        paragraphSpacing: 'normal',  // 对应CLI默认的 --paragraph-spacing normal
+        mathSpacing: 'tight',        // 对应CLI默认的 --math-spacing tight
+        mathEngine: 'auto'           // 对应CLI默认的 --math-engine auto
       }
     });
     

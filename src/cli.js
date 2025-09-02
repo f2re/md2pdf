@@ -81,9 +81,9 @@ export function createCLI() {
     .option('-f, --format <format>', '输出格式 (pdf|html)', 'pdf')
     .option('--margin <margin>', 'PDF页边距 (例如: 20mm)', '0mm')
     .option('--landscape', '横向页面')
-    .option('--font-size <size>', '字体大小 (small|medium|large|xlarge 或具体数值如 14px)', 'medium')
+    .option('--font-size <size>', '字体大小 (small|medium|large|xlarge 或具体数值如 14px)', 'large')
     .option('--chinese-font <font>', '中文字体 (simsun|simhei|simkai|fangsong|yahei|auto)', 'auto')
-    .option('--font-weight <weight>', '文字厚度 (light|normal|medium|semibold|bold|black 或数值如 400)', 'normal')
+    .option('--font-weight <weight>', '文字厚度 (light|normal|medium|semibold|bold|black 或数值如 400)', 'medium')
     .option('--line-spacing <spacing>', '行间距 (tight|normal|loose|relaxed 或数值如 1.6)', 'normal')
     .option('--paragraph-spacing <spacing>', '段落间距 (tight|normal|loose|relaxed 或数值如 1em)', 'normal')
     .option('--math-spacing <spacing>', '数学公式上下间距 (tight|normal|loose|relaxed 或数值如 20px)', 'tight')
@@ -157,8 +157,8 @@ async function handleConvert(input, output, options) {
       fontWeight: normalizedOptions.fontWeight,
       lineSpacing: normalizedOptions.lineSpacing,
       paragraphSpacing: normalizedOptions.paragraphSpacing,
-  mathSpacing: normalizedOptions.mathSpacing,
-  mathEngine: normalizedOptions.mathEngine
+      mathSpacing: normalizedOptions.mathSpacing,
+      mathEngine: normalizedOptions.mathEngine
     };
 
     // 执行转换
