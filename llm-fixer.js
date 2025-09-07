@@ -27,11 +27,22 @@ export const OLLAMA_CONFIG = {
 };
 
 /**
+ * OpenAI 兼容 API 配置
+ */
+export const OPENAI_CONFIG = {
+  baseUrl: 'https://api.openai.com',
+  model: 'gpt-3.5-turbo',
+  apiKey: process.env.OPENAI_API_KEY || '',
+  systemPrompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+};
+
+/**
  * LLM 提供商类型
  */
 export const LLM_PROVIDERS = {
   LMSTUDIO: 'lmstudio',
-  OLLAMA: 'ollama'
+  OLLAMA: 'ollama',
+  OPENAI: 'openai'
 };
 
 /**
@@ -193,16 +204,79 @@ export async function callOllamaAPI(formula, error) {
 }
 
 /**
+ * 调用 OpenAI 兼容 API 修正 LaTeX 公式
+ * @param {string} formula - 错误的公式
+ * @param {string} error - 错误信息
+ * @returns {string|null} 修正后的公式或 null
+ */
+export async function callOpenAIAPI(formula, error) {
+  try {
+    if (!OPENAI_CONFIG.apiKey) {
+      throw new Error('API Key 未配置，请设置 OPENAI_API_KEY 环境变量');
+    }
+
+    const prompt = `原始公式: ${formula}\n错误信息: ${error}`;
+    
+    const response = await fetch(`${OPENAI_CONFIG.baseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_CONFIG.apiKey}`
+      },
+      body: JSON.stringify({
+        model: OPENAI_CONFIG.model,
+        messages: [
+          {
+            role: 'system',
+            content: OPENAI_CONFIG.systemPrompt
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 1
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    let correctedFormula = data.choices?.[0]?.message?.content?.trim();
+    
+    if (!correctedFormula) {
+      throw new Error('API 返回为空');
+    }
+    
+    // 提取非思维链内容（去除 <think> 标签内的内容）
+    correctedFormula = extractNonThinkingContent(correctedFormula);
+    
+    if (!correctedFormula) {
+      throw new Error('提取最终答案后内容为空');
+    }
+    
+    return correctedFormula;
+  } catch (error) {
+    console.error(chalk.red(`   ❌ OpenAI API 调用失败: ${error.message}`));
+    return null;
+  }
+}
+
+/**
  * 统一的 LLM API 调用函数
  * @param {string} formula - 错误的公式
  * @param {string} error - 错误信息
- * @param {string} provider - LLM 提供商 ('lmstudio' 或 'ollama')
+ * @param {string} provider - LLM 提供商 ('lmstudio'、'ollama' 或 'openai')
  * @returns {string|null} 修正后的公式或 null
  */
 export async function callLLMAPI(formula, error, provider = LLM_PROVIDERS.LMSTUDIO) {
   switch (provider) {
     case LLM_PROVIDERS.OLLAMA:
       return await callOllamaAPI(formula, error);
+    case LLM_PROVIDERS.OPENAI:
+      return await callOpenAIAPI(formula, error);
     case LLM_PROVIDERS.LMSTUDIO:
     default:
       return await callLMStudioAPI(formula, error);
@@ -441,10 +515,20 @@ export async function fixSingleDetailedFormulaError(error, filePath, config = {}
  */
 export async function checkLLMProviderAvailability(provider) {
   try {
-    let url;
+    let url, headers = {};
+    
     switch (provider) {
       case LLM_PROVIDERS.OLLAMA:
         url = `${OLLAMA_CONFIG.baseUrl}/api/tags`;
+        break;
+      case LLM_PROVIDERS.OPENAI:
+        url = `${OPENAI_CONFIG.baseUrl}/v1/models`;
+        if (OPENAI_CONFIG.apiKey) {
+          headers['Authorization'] = `Bearer ${OPENAI_CONFIG.apiKey}`;
+        } else {
+          console.log(chalk.yellow(`   ⚠️ OpenAI API Key 未配置`));
+          return false;
+        }
         break;
       case LLM_PROVIDERS.LMSTUDIO:
       default:
@@ -454,6 +538,7 @@ export async function checkLLMProviderAvailability(provider) {
     
     const response = await fetch(url, { 
       method: 'GET',
+      headers,
       signal: AbortSignal.timeout(5000) // 5秒超时
     });
     
@@ -486,4 +571,62 @@ export async function selectAvailableLLMProvider(preferredProvider = LLM_PROVIDE
   
   console.log(chalk.red(`   ❌ 所有 LLM 提供商都不可用`));
   return null;
+}
+
+/**
+ * 设置 OpenAI 兼容 API 配置
+ * @param {Object} config - 配置对象
+ * @param {string} config.baseUrl - API 基础URL
+ * @param {string} config.model - 模型名称
+ * @param {string} config.apiKey - API Key
+ * @param {string} config.systemPrompt - 系统提示词
+ */
+export function setOpenAIConfig(config) {
+  if (config.baseUrl !== undefined) {
+    OPENAI_CONFIG.baseUrl = config.baseUrl;
+  }
+  if (config.model !== undefined) {
+    OPENAI_CONFIG.model = config.model;
+  }
+  if (config.apiKey !== undefined) {
+    OPENAI_CONFIG.apiKey = config.apiKey;
+  }
+  if (config.systemPrompt !== undefined) {
+    OPENAI_CONFIG.systemPrompt = config.systemPrompt;
+  }
+}
+
+/**
+ * 获取当前 OpenAI 配置
+ * @returns {Object} 当前配置
+ */
+export function getOpenAIConfig() {
+  return {
+    baseUrl: OPENAI_CONFIG.baseUrl,
+    model: OPENAI_CONFIG.model,
+    apiKey: OPENAI_CONFIG.apiKey ? '***' + OPENAI_CONFIG.apiKey.slice(-4) : '',
+    systemPrompt: OPENAI_CONFIG.systemPrompt
+  };
+}
+
+/**
+ * 获取所有LLM提供商的配置概览
+ * @returns {Object} 配置概览
+ */
+export function getAllLLMConfigs() {
+  return {
+    lmstudio: {
+      baseUrl: LMSTUDIO_CONFIG.baseUrl,
+      model: LMSTUDIO_CONFIG.model
+    },
+    ollama: {
+      baseUrl: OLLAMA_CONFIG.baseUrl,
+      model: OLLAMA_CONFIG.model
+    },
+    openai: {
+      baseUrl: OPENAI_CONFIG.baseUrl,
+      model: OPENAI_CONFIG.model,
+      hasApiKey: !!OPENAI_CONFIG.apiKey
+    }
+  };
 }

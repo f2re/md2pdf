@@ -10,12 +10,16 @@
     "merge": "node merge-md-to-pdf.js",
     "gui": "node gui-server.js",
     "start:gui": "node gui-server.js",
+    "latex-fix": "node katex-gui-server.js",
+    "start:latex-fix": "node katex-gui-server.js",
+    "formula-fix": "node katex-gui-server.js",
     "build": "echo 'No build step required for this project'",
     "test": "echo 'No tests specified'"
   },
   "bin": {
     "md2pdf": "./md2pdf.js",
-    "md2pdf-gui": "./gui-server.js"
+    "md2pdf-gui": "./gui-server.js",
+    "latex-fix": "./katex-gui-server.js"
   },
   "exports": {
     ".": "./src/index.js",
