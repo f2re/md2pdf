@@ -93,7 +93,8 @@ export class MarkdownLatexRenderer {
       
       if (startDelim === '$' && endDelim === '$') {
         // 特殊处理单美元符号
-        regex = /(?<!\$)\$(?!\$)([^\$\n]+?)\$(?!\$)/g;
+        // 支持多行内容，但区分行内和块级
+        regex = /(?<!\$)\$(?!\$)([\s\S]*?)\$(?!\$)/g;
       } else {
         regex = new RegExp(
           escapeRegExp(startDelim) + '([\\s\\S]*?)' + escapeRegExp(endDelim),
@@ -102,9 +103,15 @@ export class MarkdownLatexRenderer {
       }
 
       processedContent = processedContent.replace(regex, (match, mathContent) => {
-        const placeholder = `<!--MATH_INLINE_${mathExpressions.length}-->`;
+        // 检查是否包含换行符，如果是则作为块级处理
+        const isBlock = mathContent.includes('\n');
+        const type = isBlock ? 'block' : 'inline';
+        const placeholder = isBlock ? 
+          `<!--MATH_BLOCK_${mathExpressions.length}-->` : 
+          `<!--MATH_INLINE_${mathExpressions.length}-->`;
+        
         mathExpressions.push({
-          type: 'inline',
+          type: type,
           content: mathContent.trim(),
           placeholder
         });
