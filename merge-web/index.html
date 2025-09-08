@@ -596,6 +596,12 @@
                         <div id="progressFill" class="progress-fill"></div>
                     </div>
                     <div id="progressText" style="text-align: center; margin-top: 10px;">准备转换...</div>
+                    <div id="formulaProgress" style="text-align: center; margin-top: 5px; font-size: 0.9em; color: #666; display: none;">
+                        正在渲染公式: <span id="formulaCount">0</span> / <span id="totalFormulas">0</span>
+                    </div>
+                    <div id="phaseProgress" style="text-align: center; margin-top: 5px; font-size: 0.85em; color: #888; display: none;">
+                        当前阶段: <span id="currentPhase">准备中</span>
+                    </div>
                 </div>
 
                 <!-- 操作按钮 -->
@@ -634,8 +640,106 @@
                 this.files = [];
                 this.isConverting = false;
                 this.fileListCollapsed = false;
+                this.ws = null;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                
+                this.initWebSocket();
                 this.initEventListeners();
                 this.loadHistory();
+            }
+
+            initWebSocket() {
+                try {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}`;
+                    this.ws = new WebSocket(wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        console.log('WebSocket连接已建立');
+                        this.reconnectAttempts = 0;
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            this.handleProgressUpdate(data);
+                        } catch (error) {
+                            console.error('解析WebSocket消息失败:', error);
+                        }
+                    };
+                    
+                    this.ws.onclose = () => {
+                        console.log('WebSocket连接已关闭');
+                        this.attemptReconnect();
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket错误:', error);
+                    };
+                } catch (error) {
+                    console.error('创建WebSocket连接失败:', error);
+                }
+            }
+
+            attemptReconnect() {
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    console.log(`尝试重连WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                    setTimeout(() => {
+                        this.initWebSocket();
+                    }, 2000 * this.reconnectAttempts);
+                }
+            }
+
+            handleProgressUpdate(data) {
+                if (data.type === 'conversion_progress') {
+                    this.updateProgress(data);
+                }
+            }
+
+            updateProgress(data) {
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                const formulaProgress = document.getElementById('formulaProgress');
+                const formulaCount = document.getElementById('formulaCount');
+                const totalFormulas = document.getElementById('totalFormulas');
+                const phaseProgress = document.getElementById('phaseProgress');
+                const currentPhase = document.getElementById('currentPhase');
+
+                // 更新进度条
+                if (data.progress !== undefined) {
+                    progressFill.style.width = data.progress + '%';
+                }
+
+                // 更新主要状态文本
+                if (data.message) {
+                    progressText.textContent = data.message;
+                }
+
+                // 更新阶段显示
+                if (data.phase) {
+                    phaseProgress.style.display = 'block';
+                    const phaseNames = {
+                        'reading_file': '读取文件',
+                        'rendering_html': '渲染HTML',
+                        'formula_rendering': '渲染数学公式',
+                        'generating_pdf': '生成PDF',
+                        'completed': '转换完成',
+                        'error': '转换错误'
+                    };
+                    currentPhase.textContent = phaseNames[data.phase] || data.phase;
+                }
+
+                // 更新公式渲染进度
+                if (data.phase === 'formula_rendering' && data.totalFormulas !== undefined) {
+                    formulaProgress.style.display = 'block';
+                    formulaCount.textContent = data.renderedFormulas || 0;
+                    totalFormulas.textContent = data.totalFormulas;
+                } else if (data.phase === 'completed') {
+                    formulaProgress.style.display = 'none';
+                    phaseProgress.style.display = 'none';
+                }
             }
 
             initEventListeners() {
@@ -980,19 +1084,18 @@
                 const progressContainer = document.getElementById('progressContainer');
                 const progressFill = document.getElementById('progressFill');
                 const progressText = document.getElementById('progressText');
+                const formulaProgress = document.getElementById('formulaProgress');
+                const phaseProgress = document.getElementById('phaseProgress');
 
                 convertBtn.disabled = true;
                 convertBtn.innerHTML = '<div class="loading"></div> 转换中...';
                 progressContainer.style.display = 'block';
+                formulaProgress.style.display = 'none';
+                phaseProgress.style.display = 'none';
 
-                // 模拟进度
-                let progress = 0;
-                const progressInterval = setInterval(() => {
-                    progress += Math.random() * 10;
-                    if (progress > 90) progress = 90;
-                    progressFill.style.width = progress + '%';
-                    progressText.textContent = `转换进度: ${Math.round(progress)}%`;
-                }, 200);
+                // 初始化进度显示
+                progressFill.style.width = '0%';
+                progressText.textContent = '准备转换...';
 
                 try {
                     const styleOptions = this.getStyleOptions();
@@ -1011,9 +1114,11 @@
 
                     const result = await response.json();
 
-                    clearInterval(progressInterval);
+                    // 确保最终进度显示
                     progressFill.style.width = '100%';
                     progressText.textContent = '转换完成!';
+                    formulaProgress.style.display = 'none';
+                    phaseProgress.style.display = 'none';
 
                     if (result.success) {
                         this.showMessage(
@@ -1037,7 +1142,6 @@
                     }
 
                 } catch (error) {
-                    clearInterval(progressInterval);
                     this.showMessage('转换失败: ' + error.message, 'error');
                 } finally {
                     this.isConverting = false;
@@ -1047,6 +1151,8 @@
                     setTimeout(() => {
                         progressContainer.style.display = 'none';
                         progressFill.style.width = '0%';
+                        formulaProgress.style.display = 'none';
+                        phaseProgress.style.display = 'none';
                     }, 2000);
                 }
             }

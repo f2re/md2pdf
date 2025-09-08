@@ -30,6 +30,37 @@ export class MarkdownLatexRenderer {
         return `<pre class="hljs"><code>${escapeHtml(str)}</code></pre>`;
       }
     });
+
+    // 进度监控
+    this.progressCallback = null;
+    this.totalFormulas = 0;
+    this.renderedFormulas = 0;
+  }
+
+  /**
+   * 设置进度回调函数
+   * @param {Function} callback - 进度回调函数 (renderedCount, totalCount) => void
+   */
+  setProgressCallback(callback) {
+    this.progressCallback = callback;
+  }
+
+  /**
+   * 重置进度计数
+   */
+  resetProgress() {
+    this.totalFormulas = 0;
+    this.renderedFormulas = 0;
+  }
+
+  /**
+   * 更新进度并调用回调
+   */
+  updateProgress() {
+    this.renderedFormulas++;
+    if (this.progressCallback) {
+      this.progressCallback(this.renderedFormulas, this.totalFormulas);
+    }
   }
 
   /**
@@ -119,6 +150,10 @@ export class MarkdownLatexRenderer {
       });
     }
 
+    // 设置总公式数量
+    this.totalFormulas = mathExpressions.length;
+    this.renderedFormulas = 0;
+
     return { processedContent, mathExpressions };
   }
 
@@ -129,34 +164,41 @@ export class MarkdownLatexRenderer {
    * @returns {string} 渲染后的HTML
    */
   renderMath(content, displayMode = false, mathEngine = DEFAULT_MATH_ENGINE) {
+    let result;
+    
     // 强制使用 MathJax：返回原始 TeX，以便后续由 MathJax 处理
     if (mathEngine === MATH_ENGINE.MATHJAX) {
       const { html } = renderTeXToCHTML(content, displayMode);
-      return html;
-    }
-
-    // 默认/KaTeX：先尝试 KaTeX，失败则回退为原始 TeX
-    try {
-      return katex.renderToString(content, {
-        ...KATEX_CONFIG,
-        // 为了能捕获不支持的指令并回退到 MathJax，这里强制抛错
-        throwOnError: true,
-        displayMode,
-        // 明确禁用严格模式警告，避免Unicode字符警告
-        strict: false
-      });
-    } catch (error) {
-      console.warn('KaTeX rendering error:', error?.message || error);
-      // 回退到本地 MathJax 渲染（服务端）
+      result = html;
+    } else {
+      // 默认/KaTeX：先尝试 KaTeX，失败则回退为原始 TeX
       try {
-        const { html } = renderTeXToCHTML(content, displayMode);
-        return html;
-      } catch (err2) {
-        console.warn('MathJax fallback error:', err2?.message || err2);
-        // 最终保底：保留原始 TeX 文本
-        return displayMode ? `$$${content}$$` : `$${content}$`;
+        result = katex.renderToString(content, {
+          ...KATEX_CONFIG,
+          // 为了能捕获不支持的指令并回退到 MathJax，这里强制抛错
+          throwOnError: true,
+          displayMode,
+          // 明确禁用严格模式警告，避免Unicode字符警告
+          strict: false
+        });
+      } catch (error) {
+        console.warn('KaTeX rendering error:', error?.message || error);
+        // 回退到本地 MathJax 渲染（服务端）
+        try {
+          const { html } = renderTeXToCHTML(content, displayMode);
+          result = html;
+        } catch (err2) {
+          console.warn('MathJax fallback error:', err2?.message || err2);
+          // 最终保底：保留原始 TeX 文本
+          result = displayMode ? `$$${content}$$` : `$${content}$`;
+        }
       }
     }
+
+    // 更新进度
+    this.updateProgress();
+    
+    return result;
   }
 
   /**
@@ -166,6 +208,9 @@ export class MarkdownLatexRenderer {
    * @returns {Promise<string>} 完整的 HTML 文档
    */
   async render(content, styleOptions = {}) {
+    // 重置进度
+    this.resetProgress();
+    
     // 1. 处理数学表达式
     const { processedContent, mathExpressions } = this.processMathExpressions(content);
 

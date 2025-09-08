@@ -13,6 +13,8 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { MarkdownToPdfConverter } from './src/converter.js';
 import chalk from 'chalk';
 import cors from 'cors';
+import { WebSocketServer } from 'ws';
+import { createServer } from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,8 +27,53 @@ class MergeGUIServer {
     this.outputDir = path.join(__dirname, 'merge-output');
     this.tempDir = path.join(__dirname, 'merge-temp');
     
+    // 创建HTTP服务器
+    this.server = createServer(this.app);
+    
+    // 创建WebSocket服务器
+    this.wss = new WebSocketServer({ server: this.server });
+    this.wsClients = new Set();
+    
+    this.setupWebSocket();
     this.setupMiddleware();
     this.setupRoutes();
+  }
+
+  /**
+   * 设置WebSocket连接
+   */
+  setupWebSocket() {
+    this.wss.on('connection', (ws) => {
+      console.log(chalk.blue('🔗 WebSocket客户端连接'));
+      this.wsClients.add(ws);
+      
+      ws.on('close', () => {
+        console.log(chalk.blue('❌ WebSocket客户端断开'));
+        this.wsClients.delete(ws);
+      });
+      
+      ws.on('error', (error) => {
+        console.error(chalk.red('WebSocket错误:'), error);
+        this.wsClients.delete(ws);
+      });
+    });
+  }
+
+  /**
+   * 广播进度消息到所有连接的客户端
+   */
+  broadcastProgress(data) {
+    const message = JSON.stringify(data);
+    this.wsClients.forEach(ws => {
+      if (ws.readyState === ws.OPEN) {
+        try {
+          ws.send(message);
+        } catch (error) {
+          console.error(chalk.red('发送WebSocket消息失败:'), error);
+          this.wsClients.delete(ws);
+        }
+      }
+    });
   }
 
   /**
@@ -184,6 +231,15 @@ class MergeGUIServer {
         const converter = new MarkdownToPdfConverter({
           reuseInstance: true
           // 完全移除maxPages限制
+        });
+
+        // 设置进度回调
+        converter.setProgressCallback((phase, data) => {
+          this.broadcastProgress({
+            type: 'conversion_progress',
+            phase,
+            ...data
+          });
         });
 
         await converter.convert({
@@ -372,8 +428,9 @@ class MergeGUIServer {
   async start() {
     return new Promise((resolve, reject) => {
       try {
-        this.server = this.app.listen(this.port, () => {
+        this.server.listen(this.port, () => {
           console.log(chalk.green(`🌐 合并GUI服务器启动在端口 ${this.port}`));
+          console.log(chalk.blue(`📡 WebSocket服务器已启动`));
           resolve();
         });
       } catch (error) {
@@ -386,6 +443,12 @@ class MergeGUIServer {
    * 停止服务器
    */
   async stop() {
+    // 关闭所有WebSocket连接
+    this.wsClients.forEach(ws => {
+      ws.close();
+    });
+    this.wsClients.clear();
+    
     if (this.server) {
       this.server.close();
     }

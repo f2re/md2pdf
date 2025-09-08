@@ -18,6 +18,26 @@ export class MarkdownToPdfConverter {
     this.reuseInstance = options.reuseInstance !== false; // 默认启用实例复用
     this.maxPages = options.maxPages || Infinity; // 移除页面数限制
     this.openPages = new Set(); // 跟踪打开的页面
+    this.progressCallback = options.progressCallback || null; // 进度回调
+  }
+
+  /**
+   * 设置进度回调函数
+   * @param {Function} callback - 进度回调函数，接收 (phase, data) 参数
+   */
+  setProgressCallback(callback) {
+    this.progressCallback = callback;
+    // 同时设置渲染器的进度回调
+    this.renderer.setProgressCallback((renderedCount, totalCount) => {
+      if (this.progressCallback) {
+        this.progressCallback('formula_rendering', {
+          phase: 'formula_rendering',
+          renderedFormulas: renderedCount,
+          totalFormulas: totalCount,
+          progress: totalCount > 0 ? (renderedCount / totalCount) * 100 : 0
+        });
+      }
+    });
   }
 
   /**
@@ -33,25 +53,90 @@ export class MarkdownToPdfConverter {
   async convert(options) {
     const { input, output, format = 'pdf', pdfOptions = {}, styleOptions = {} } = options;
 
-    // 读取 Markdown 文件
-    const markdownContent = await fs.readFile(input, 'utf-8');
-    
-    // 渲染为 HTML
-    const html = await this.renderer.render(markdownContent, styleOptions);
+    try {
+      // 阶段1: 读取文件
+      if (this.progressCallback) {
+        this.progressCallback('reading_file', {
+          phase: 'reading_file',
+          message: '读取Markdown文件...',
+          progress: 10
+        });
+      }
 
-    if (format === 'html') {
-      const outputPath = output || await getOutputPath(input, 'html');
-      await fs.writeFile(outputPath, html, 'utf-8');
-      return outputPath;
+      // 读取 Markdown 文件
+      const markdownContent = await fs.readFile(input, 'utf-8');
+      
+      // 阶段2: 开始渲染
+      if (this.progressCallback) {
+        this.progressCallback('rendering_html', {
+          phase: 'rendering_html',
+          message: '渲染HTML内容...',
+          progress: 20
+        });
+      }
+
+      // 渲染为 HTML
+      const html = await this.renderer.render(markdownContent, styleOptions);
+
+      if (format === 'html') {
+        // 阶段3: 保存HTML
+        if (this.progressCallback) {
+          this.progressCallback('saving_html', {
+            phase: 'saving_html',
+            message: '保存HTML文件...',
+            progress: 90
+          });
+        }
+
+        const outputPath = output || await getOutputPath(input, 'html');
+        await fs.writeFile(outputPath, html, 'utf-8');
+        
+        if (this.progressCallback) {
+          this.progressCallback('completed', {
+            phase: 'completed',
+            message: 'HTML转换完成',
+            progress: 100
+          });
+        }
+        
+        return outputPath;
+      }
+
+      if (format === 'pdf') {
+        // 阶段3: 生成PDF
+        if (this.progressCallback) {
+          this.progressCallback('generating_pdf', {
+            phase: 'generating_pdf',
+            message: '生成PDF文件...',
+            progress: 70
+          });
+        }
+
+        const outputPath = output || await getOutputPath(input, 'pdf');
+        await this.generatePdf(html, outputPath, pdfOptions);
+        
+        if (this.progressCallback) {
+          this.progressCallback('completed', {
+            phase: 'completed',
+            message: 'PDF转换完成',
+            progress: 100
+          });
+        }
+        
+        return outputPath;
+      }
+
+      throw new Error(`Unsupported format: ${format}`);
+    } catch (error) {
+      if (this.progressCallback) {
+        this.progressCallback('error', {
+          phase: 'error',
+          message: `转换失败: ${error.message}`,
+          error: error.message
+        });
+      }
+      throw error;
     }
-
-    if (format === 'pdf') {
-      const outputPath = output || await getOutputPath(input, 'pdf');
-      await this.generatePdf(html, outputPath, pdfOptions);
-      return outputPath;
-    }
-
-    throw new Error(`Unsupported format: ${format}`);
   }
 
   /**
