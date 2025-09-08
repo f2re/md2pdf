@@ -16,7 +16,7 @@ export class MarkdownToPdfConverter {
     this.renderer = new MarkdownLatexRenderer();
     this.browser = null;
     this.reuseInstance = options.reuseInstance !== false; // 默认启用实例复用
-    this.maxPages = options.maxPages || 10; // 最大页面数限制
+    this.maxPages = options.maxPages || Infinity; // 移除页面数限制
     this.openPages = new Set(); // 跟踪打开的页面
   }
 
@@ -348,8 +348,8 @@ export async function convertMarkdownToHtml(inputFile, outputFile, options = {})
  */
 export async function convertMarkdownBatch(conversions) {
   const converter = new MarkdownToPdfConverter({
-    reuseInstance: true,  // 批量转换启用实例复用
-    maxPages: 50          // 增加页面限制
+    reuseInstance: true  // 批量转换启用实例复用
+    // 移除页面限制
   });
   
   return await converter.convertBatch(conversions);

@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to PDF 转换器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .upload-section, .preview-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #718096;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group select:focus, .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .convert-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .preview-area {
+            min-height: 500px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            color: #a0aec0;
+            font-size: 1.1rem;
+            background: #f9fafb;
+            overflow: hidden;
+        }
+
+        .preview-area.has-content {
+            align-items: stretch;
+            justify-content: stretch;
+        }
+
+        .preview-area.empty {
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-content {
+            flex: 1;
+            width: 100%;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            min-height: 450px;
+        }
+
+        .preview-actions {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            border-radius: 0 0 8px 8px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .result-info {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .result-info.error {
+            background: #fed7d7;
+            border-color: #feb2b2;
+            color: #c53030;
+        }
+
+        .result-info.success {
+            color: #22543d;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .history-section {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+
+        .history-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: #edf2f7;
+            transform: translateY(-1px);
+        }
+
+        .history-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .file-details h4 {
+            margin-bottom: 5px;
+            color: #2d3748;
+        }
+
+        .file-meta {
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .preview-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .delete-btn {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            opacity: 0.9;
+        }
+
+        .review-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1000px;
+            height: 80%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-actions {
+            padding: 15px 20px;
+            background: #f9fafb;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #a0aec0;
+        }
+
+        .review-frame {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: white;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Markdown to PDF 转换器</h1>
+            <p>支持LaTeX数学公式 | 美观排版 | 实时预览</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <h2 class="section-title">
+                    📤 文件上传与配置
+                </h2>
+                
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">
+                        点击选择或拖拽Markdown文件到此处<br>
+                        支持 .md 格式文件
+                    </div>
+                    <button class="upload-btn" type="button">选择文件</button>
+                </div>
+                
+                <input type="file" id="fileInput" class="file-input" accept=".md,.markdown" />
+                
+                <div class="options-grid">
+                    <div class="form-group">
+                        <label for="format">输出格式</label>
+                        <select id="format">
+                            <option value="pdf">PDF文档</option>
+                            <option value="html">HTML网页</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="fontSize">字体大小</label>
+                        <select id="fontSize">
+                            <option value="small">小号</option>
+                            <option value="medium">中号</option>
+                            <option value="large" selected>大号</option>
+                            <option value="xlarge">特大号</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="chineseFont">中文字体</label>
+                        <select id="chineseFont">
+                            <option value="auto" selected>自动选择</option>
+                            <option value="simsun">宋体</option>
+                            <option value="simhei">黑体</option>
+                            <option value="simkai">楷体</option>
+                            <option value="fangsong">仿宋</option>
+                            <option value="yahei">微软雅黑</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mathEngine">数学引擎</label>
+                        <select id="mathEngine">
+                            <option value="auto" selected>自动选择</option>
+                            <option value="katex">KaTeX</option>
+                            <option value="mathjax">MathJax</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="margin">页边距</label>
+                        <input type="text" id="margin" placeholder="20mm" value="0mm" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lineSpacing">行间距</label>
+                        <select id="lineSpacing">
+                            <option value="tight">紧密</option>
+                            <option value="normal" selected>正常</option>
+                            <option value="loose">宽松</option>
+                            <option value="relaxed">很宽松</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="convert-btn" id="convertBtn" disabled>
+                    🚀 开始转换
+                </button>
+                
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div class="result-info" id="resultInfo"></div>
+            </div>
+
+            <div class="preview-section">
+                <h2 class="section-title">
+                    👁️ 实时预览
+                </h2>
+                
+                <div class="preview-area empty" id="previewArea">
+                    <div>转换完成后，预览将在此显示</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <h2 class="section-title">
+                📚 转换历史
+            </h2>
+            <div class="history-list" id="historyList">
+                <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                    暂无转换记录
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审阅模态框 -->
+    <div class="review-modal" id="reviewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">文件审阅</h3>
+                <button class="close-btn" onclick="closeReviewModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <iframe class="review-frame" id="reviewFrame"></iframe>
+            </div>
+            <div class="modal-actions" id="modalActions" style="display: none;">
+                <a id="modalDownloadBtn" href="#" class="download-btn" download>📥 下载文件</a>
+                <button class="download-btn" onclick="openModalInNewTab()" style="background: #38a169; border: none; cursor: pointer;">🔍 新窗口打开</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistory();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.querySelector('.upload-area');
+            const convertBtn = document.getElementById('convertBtn');
+
+            // 文件选择
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // 拖拽上传
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('drop', handleDrop);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            
+            // 转换按钮
+            convertBtn.addEventListener('click', handleConvert);
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                updateUploadArea(file.name);
+                document.getElementById('convertBtn').disabled = false;
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.name.endsWith('.md') || file.name.endsWith('.markdown')) {
+                    selectedFile = file;
+                    updateUploadArea(file.name);
+                    document.getElementById('convertBtn').disabled = false;
+                } else {
+                    showResult('error', '请选择Markdown文件(.md)');
+                }
+            }
+        }
+
+        function updateUploadArea(filename) {
+            const uploadArea = document.querySelector('.upload-area');
+            uploadArea.innerHTML = `
+                <div class="upload-icon">✅</div>
+                <div class="upload-text">
+                    已选择文件: <strong>${filename}</strong><br>
+                    点击可重新选择文件
+                </div>
+            `;
+        }
+
+        async function handleConvert() {
+            if (!selectedFile) {
+                showResult('error', '请选择Markdown文件');
+                return;
+            }
+
+            const convertBtn = document.getElementById('convertBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            // 显示进度条
+            convertBtn.disabled = true;
+            convertBtn.textContent = '🔄 转换中...';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '30%';
+
+            try {
+                const formData = new FormData();
+                formData.append('markdown', selectedFile);
+                formData.append('format', document.getElementById('format').value);
+                formData.append('fontSize', document.getElementById('fontSize').value);
+                formData.append('chineseFont', document.getElementById('chineseFont').value);
+                formData.append('mathEngine', document.getElementById('mathEngine').value);
+                formData.append('margin', document.getElementById('margin').value);
+                formData.append('lineSpacing', document.getElementById('lineSpacing').value);
+
+                progressFill.style.width = '60%';
+
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressFill.style.width = '90%';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    progressFill.style.width = '100%';
+                    showResult('success', `转换成功！文件已生成: ${result.filename}`);
+                    updatePreview(result);
+                    loadHistory();
+                } else {
+                    throw new Error(result.message || '转换失败');
+                }
+
+            } catch (error) {
+                showResult('error', '转换失败: ' + error.message);
+            } finally {
+                // 恢复按钮状态
+                setTimeout(() => {
+                    convertBtn.disabled = false;
+                    convertBtn.textContent = '🚀 开始转换';
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        function showResult(type, message) {
+            const resultInfo = document.getElementById('resultInfo');
+            resultInfo.className = `result-info ${type}`;
+            resultInfo.innerHTML = message;
+            resultInfo.style.display = 'block';
+
+            setTimeout(() => {
+                resultInfo.style.display = 'none';
+            }, 5000);
+        }
+
+        function updatePreview(result) {
+            const previewArea = document.getElementById('previewArea');
+            previewArea.className = 'preview-area has-content';
+            
+            if (result.format === 'pdf') {
+                previewArea.innerHTML = `
+                    <embed src="${result.previewUrl}" type="application/pdf" class="preview-content" />
+                    <div class="preview-actions">
+                        <a href="${result.previewUrl}" class="download-btn" download>📥 下载PDF</a>
+                        <button class="download-btn" onclick="openInNewTab('${result.previewUrl}')" style="background: #38a169; border: none; cursor: pointer;">🔍 新窗口打开</button>
+                    </div>
+                `;
+            } else if (result.format === 'html') {
+                previewArea.innerHTML = `
+                    <iframe src="${result.previewUrl}" class="preview-content"></iframe>
+                    <div class="preview-actions">
+                        <a href="${result.previewUrl}" class="download-btn" download>📥 下载HTML</a>
+                        <button class="download-btn" onclick="openInNewTab('${result.previewUrl}')" style="background: #38a169; border: none; cursor: pointer;">🔍 新窗口打开</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/history');
+                const files = await response.json();
+                
+                const historyList = document.getElementById('historyList');
+                
+                if (files.length === 0) {
+                    historyList.innerHTML = `
+                        <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                            暂无转换记录
+                        </div>
+                    `;
+                    return;
+                }
+
+                historyList.innerHTML = files.map(file => `
+                    <div class="history-item">
+                        <div class="history-info">
+                            <div class="file-icon">${file.type.toUpperCase()}</div>
+                            <div class="file-details">
+                                <h4>${file.filename}</h4>
+                                <div class="file-meta">
+                                    ${formatFileSize(file.size)} • ${formatDate(file.created)}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="history-actions">
+                            <button class="action-btn preview-btn" onclick="previewFile('${file.filename}')">
+                                👁️ 审阅
+                            </button>
+                            <a href="${file.path}" class="action-btn preview-btn" download style="text-decoration: none;">
+                                📥 下载
+                            </a>
+                            <button class="action-btn delete-btn" onclick="deleteFile('${file.filename}')">
+                                🗑️ 删除
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+            }
+        }
+
+        async function previewFile(filename) {
+            try {
+                const response = await fetch(`/review/${filename}`);
+                const result = await response.json();
+                
+                const modal = document.getElementById('reviewModal');
+                const title = document.getElementById('modalTitle');
+                const frame = document.getElementById('reviewFrame');
+                const actions = document.getElementById('modalActions');
+                const downloadBtn = document.getElementById('modalDownloadBtn');
+                
+                title.textContent = `审阅: ${filename}`;
+                
+                if (result.type === 'pdf') {
+                    frame.src = result.url;
+                    downloadBtn.href = result.url;
+                    downloadBtn.download = filename;
+                    currentModalUrl = result.url;
+                } else if (result.type === 'html') {
+                    frame.srcdoc = result.content;
+                    downloadBtn.href = `/output/${filename}`;
+                    downloadBtn.download = filename;
+                    currentModalUrl = `/output/${filename}`;
+                }
+                
+                actions.style.display = 'flex';
+                modal.style.display = 'flex';
+                
+            } catch (error) {
+                showResult('error', '预览文件失败: ' + error.message);
+            }
+        }
+
+        let currentModalUrl = '';
+
+        function openModalInNewTab() {
+            if (currentModalUrl) {
+                window.open(currentModalUrl, '_blank');
+            }
+        }
+
+        function closeReviewModal() {
+            const modal = document.getElementById('reviewModal');
+            const actions = document.getElementById('modalActions');
+            modal.style.display = 'none';
+            actions.style.display = 'none';
+            document.getElementById('reviewFrame').src = '';
+            currentModalUrl = '';
+        }
+
+        async function deleteFile(filename) {
+            if (!confirm(`确定要删除文件 "${filename}" 吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/file/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showResult('success', '文件删除成功');
+                    loadHistory();
+                } else {
+                    throw new Error('删除失败');
+                }
+            } catch (error) {
+                showResult('error', '删除文件失败: ' + error.message);
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN');
+        }
+
+        function openInNewTab(url) {
+            window.open(url, '_blank');
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('reviewModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeReviewModal();
+            }
+        });
+    </script>
+</body>
+</html>

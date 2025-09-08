@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件合并转换器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #4facfe;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #4facfe;
+            background: #e8f4fd;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #4facfe;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 0.9rem;
+            color: #999;
+            margin-bottom: 15px;
+        }
+
+        .upload-buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(17, 153, 142, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 65, 108, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .file-list {
+            margin: 20px 0;
+        }
+
+        .file-list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .file-list-header:hover {
+            background: #e9ecef;
+        }
+
+        .file-list-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .collapse-icon {
+            transition: transform 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .file-items-container {
+            max-height: 400px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease;
+        }
+
+        .file-items-container.collapsed {
+            max-height: 0;
+            overflow: hidden;
+        }
+
+        .file-count-badge {
+            background: #4facfe;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4facfe;
+            transition: background-color 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: #e9ecef;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .folder-indicator {
+            color: #666;
+            font-size: 0.9rem;
+            margin-left: 5px;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .style-options {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .style-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #b8daff;
+        }
+
+        .history-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.3s ease;
+        }
+
+        .history-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .history-meta {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .drag-sort {
+            cursor: move;
+        }
+
+        .drag-over {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .icon {
+            margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+            
+            .style-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .file-actions {
+                align-self: flex-end;
+            }
+
+            .upload-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 文件合并器</h1>
+            <p>智能合并多个文件并转换为专业PDF文档（无限制版本）</p>
+        </div>
+
+        <!-- 主功能区域 -->
+        <div class="main-card">
+            <div class="card-header">
+                <h2>🔗 文件合并与转换（无限制）</h2>
+            </div>
+            <div class="card-body">
+                <!-- 文件上传区域 -->
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">拖拽文件/文件夹到此处或点击选择</div>
+                    <div class="upload-hint">支持各种文件格式，可同时选择多个文件（无数量和大小限制）</div>
+                    <div class="upload-buttons">
+                        <input type="file" id="fileInput" class="file-input" multiple />
+                        <input type="file" id="folderInput" class="file-input" webkitdirectory multiple />
+                        <button class="btn btn-primary btn-small" onclick="document.getElementById('fileInput').click()">
+                            📄 选择文件
+                        </button>
+                        <button class="btn btn-primary btn-small" onclick="document.getElementById('folderInput').click()">
+                            📁 选择文件夹
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 状态消息 -->
+                <div id="statusMessage" class="status-message"></div>
+
+                <!-- 文件列表 -->
+                <div id="fileList" class="file-list" style="display: none;">
+                    <div class="file-list-header" onclick="mergeGUI.toggleFileList()">
+                        <div class="file-list-title">
+                            <span class="collapse-icon" id="collapseIcon">🔽</span>
+                            <span>📋 已选择的文件</span>
+                            <span class="file-count-badge" id="fileCountBadge">0</span>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn btn-primary btn-small" onclick="mergeGUI.sortFiles(); event.stopPropagation();">
+                                🔄 重新排序
+                            </button>
+                        </div>
+                    </div>
+                    <div id="fileItemsContainer" class="file-items-container">
+                        <div id="fileItems"></div>
+                        <div style="margin-top: 10px; color: #666; font-size: 0.9rem;">
+                            💡 提示：可拖拽文件项目调整合并顺序
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 样式选项 -->
+                <div id="styleOptions" class="style-options" style="display: none;">
+                    <h3>🎨 PDF样式设置</h3>
+                    <div class="style-grid">
+                        <div class="form-group">
+                            <label class="form-label">输出文件名</label>
+                            <input type="text" id="outputName" class="form-input" placeholder="merged-document.pdf" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">字体大小</label>
+                            <select id="fontSize" class="form-select">
+                                <option value="small">小号</option>
+                                <option value="medium">中号</option>
+                                <option value="large" selected>大号</option>
+                                <option value="huge">特大号</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">中文字体</label>
+                            <select id="chineseFont" class="form-select">
+                                <option value="auto" selected>自动检测</option>
+                                <option value="songti">宋体</option>
+                                <option value="heiti">黑体</option>
+                                <option value="kaiti">楷体</option>
+                                <option value="fangsong">仿宋</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">字体粗细</label>
+                            <select id="fontWeight" class="form-select">
+                                <option value="light">细体</option>
+                                <option value="medium" selected>中等</option>
+                                <option value="bold">粗体</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">行间距</label>
+                            <select id="lineSpacing" class="form-select">
+                                <option value="tight">紧密</option>
+                                <option value="normal" selected>标准</option>
+                                <option value="loose">宽松</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">段落间距</label>
+                            <select id="paragraphSpacing" class="form-select">
+                                <option value="tight">紧密</option>
+                                <option value="normal" selected>标准</option>
+                                <option value="loose">宽松</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">数学公式间距</label>
+                            <select id="mathSpacing" class="form-select">
+                                <option value="tight" selected>紧密</option>
+                                <option value="normal">标准</option>
+                                <option value="loose">宽松</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">数学引擎</label>
+                            <select id="mathEngine" class="form-select">
+                                <option value="auto" selected>自动选择</option>
+                                <option value="katex">KaTeX</option>
+                                <option value="mathjax">MathJax</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 进度条 -->
+                <div id="progressContainer" class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <div id="progressText" style="text-align: center; margin-top: 10px;">准备转换...</div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div style="text-align: center; margin-top: 20px;">
+                    <button id="convertBtn" class="btn btn-success" style="display: none;" disabled>
+                        <span class="icon">🔄</span>
+                        合并并转换为PDF
+                    </button>
+                    <button id="clearBtn" class="btn btn-danger btn-small" style="display: none; margin-left: 10px;">
+                        <span class="icon">🗑️</span>
+                        清空文件
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 历史记录区域 -->
+        <div class="history-section">
+            <div class="card-header">
+                <h2>📜 转换历史</h2>
+            </div>
+            <div class="card-body">
+                <div id="historyList">
+                    <div style="text-align: center; color: #666; padding: 20px;">
+                        <div class="loading" id="historyLoading"></div>
+                        <div style="margin-top: 10px;">加载历史记录...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class MergeGUI {
+            constructor() {
+                this.files = [];
+                this.isConverting = false;
+                this.fileListCollapsed = false;
+                this.initEventListeners();
+                this.loadHistory();
+            }
+
+            initEventListeners() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('fileInput');
+                const folderInput = document.getElementById('folderInput');
+                const convertBtn = document.getElementById('convertBtn');
+                const clearBtn = document.getElementById('clearBtn');
+
+                // 文件上传事件
+                uploadArea.addEventListener('click', (e) => {
+                    if (!this.isConverting && !e.target.classList.contains('btn')) {
+                        fileInput.click();
+                    }
+                });
+
+                fileInput.addEventListener('change', (e) => {
+                    this.handleFiles(e.target.files);
+                });
+
+                folderInput.addEventListener('change', (e) => {
+                    this.handleFolderFiles(e.target.files);
+                });
+
+                // 拖拽事件
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (!this.isConverting) {
+                        uploadArea.classList.add('dragover');
+                    }
+                });
+
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    if (!this.isConverting) {
+                        this.handleDroppedItems(e.dataTransfer.items);
+                    }
+                });
+
+                // 按钮事件
+                convertBtn.addEventListener('click', () => this.convertFiles());
+                clearBtn.addEventListener('click', () => this.clearFiles());
+
+                // 文件列表拖拽排序
+                this.initSortable();
+            }
+
+            async handleDroppedItems(items) {
+                const files = [];
+                
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.kind === 'file') {
+                        const entry = item.webkitGetAsEntry();
+                        if (entry) {
+                            if (entry.isDirectory) {
+                                // 处理文件夹
+                                const folderFiles = await this.readDirectory(entry);
+                                files.push(...folderFiles);
+                            } else {
+                                // 处理单个文件
+                                const file = item.getAsFile();
+                                if (file) files.push(file);
+                            }
+                        }
+                    }
+                }
+                
+                if (files.length > 0) {
+                    this.handleFiles(files);
+                }
+            }
+
+            async readDirectory(directoryEntry) {
+                const files = [];
+                
+                const readEntries = (reader) => {
+                    return new Promise((resolve) => {
+                        reader.readEntries(resolve);
+                    });
+                };
+                
+                const traverseDirectory = async (directory) => {
+                    const reader = directory.createReader();
+                    const entries = await readEntries(reader);
+                    
+                    for (const entry of entries) {
+                        if (entry.isFile) {
+                            const file = await new Promise((resolve) => {
+                                entry.file(resolve);
+                            });
+                            // 添加文件夹路径信息
+                            file.folderPath = entry.fullPath;
+                            files.push(file);
+                        } else if (entry.isDirectory) {
+                            // 递归处理子文件夹
+                            await traverseDirectory(entry);
+                        }
+                    }
+                };
+                
+                await traverseDirectory(directoryEntry);
+                return files;
+            }
+
+            async handleFolderFiles(fileList) {
+                console.log('文件夹上传:', Array.from(fileList).map(f => ({
+                    name: f.name,
+                    path: f.webkitRelativePath,
+                    size: f.size
+                })));
+
+                if (fileList.length === 0) {
+                    this.showMessage('文件夹为空', 'error');
+                    return;
+                }
+
+                this.showMessage(`文件夹中找到 ${fileList.length} 个文件，正在上传...`, 'info');
+                
+                // 为文件添加路径信息用于显示
+                Array.from(fileList).forEach(file => {
+                    file.folderPath = file.webkitRelativePath;
+                });
+
+                this.uploadFiles(Array.from(fileList));
+            }
+
+            async handleFiles(fileList) {
+                const newFiles = Array.from(fileList);
+
+                console.log('选择的文件:', newFiles.map(f => ({
+                    name: f.name,
+                    type: f.type,
+                    size: f.size
+                })));
+
+                if (newFiles.length === 0) {
+                    this.showMessage('请选择文件', 'error');
+                    return;
+                }
+
+                this.uploadFiles(newFiles);
+            }
+
+            async uploadFiles(fileList) {
+                console.log('准备上传的文件:', fileList.map(f => ({
+                    name: f.name,
+                    type: f.type,
+                    size: f.size,
+                    path: f.folderPath || ''
+                })));
+
+                this.showMessage('正在上传文件...', 'info');
+
+                try {
+                    const formData = new FormData();
+                    fileList.forEach(file => {
+                        console.log(`添加文件到FormData: ${file.name}`);
+                        formData.append('markdownFiles', file);
+                    });
+
+                    console.log('发送上传请求...');
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    console.log('响应状态:', response.status);
+                    console.log('响应头:', response.headers.get('content-type'));
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('服务器错误响应:', errorText);
+                        throw new Error(`服务器错误 ${response.status}: ${errorText}`);
+                    }
+
+                    const result = await response.json();
+                    console.log('上传结果:', result);
+
+                    if (result.success) {
+                        this.files = [...this.files, ...result.files];
+                        this.updateFileList();
+                        this.showMessage(`成功上传 ${result.files.length} 个文件`, 'success');
+                    } else {
+                        this.showMessage(result.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('上传错误:', error);
+                    this.showMessage('上传失败: ' + error.message, 'error');
+                }
+            }
+
+            initSortable() {
+                // 简单的拖拽排序实现
+                let draggedElement = null;
+
+                document.addEventListener('dragstart', (e) => {
+                    if (e.target.classList.contains('drag-sort')) {
+                        draggedElement = e.target;
+                        e.target.style.opacity = '0.5';
+                    }
+                });
+
+                document.addEventListener('dragend', (e) => {
+                    if (e.target.classList.contains('drag-sort')) {
+                        e.target.style.opacity = '';
+                        draggedElement = null;
+                    }
+                });
+
+                document.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                });
+
+                document.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (draggedElement && e.target.classList.contains('drag-sort') && draggedElement !== e.target) {
+                        this.reorderFiles(draggedElement, e.target);
+                    }
+                });
+            }
+
+            toggleFileList() {
+                this.fileListCollapsed = !this.fileListCollapsed;
+                const container = document.getElementById('fileItemsContainer');
+                const icon = document.getElementById('collapseIcon');
+                
+                if (this.fileListCollapsed) {
+                    container.classList.add('collapsed');
+                    icon.classList.add('collapsed');
+                } else {
+                    container.classList.remove('collapsed');
+                    icon.classList.remove('collapsed');
+                }
+            }
+
+            sortFiles() {
+                this.files.sort((a, b) => this.naturalSort(a.originalName, b.originalName));
+                this.updateFileList();
+                this.showMessage('文件已重新排序', 'info');
+            }
+
+            naturalSort(a, b) {
+                const regex = /(\d+|\D+)/g;
+                const aParts = a.match(regex) || [];
+                const bParts = b.match(regex) || [];
+                
+                const maxLength = Math.max(aParts.length, bParts.length);
+                
+                for (let i = 0; i < maxLength; i++) {
+                    const aPart = aParts[i] || '';
+                    const bPart = bParts[i] || '';
+                    
+                    if (/^\d+$/.test(aPart) && /^\d+$/.test(bPart)) {
+                        const numA = parseInt(aPart, 10);
+                        const numB = parseInt(bPart, 10);
+                        if (numA !== numB) {
+                            return numA - numB;
+                        }
+                    } else {
+                        if (aPart !== bPart) {
+                            return aPart.localeCompare(bPart);
+                        }
+                    }
+                }
+                
+                return 0;
+            }
+
+            updateFileList() {
+                const fileListDiv = document.getElementById('fileList');
+                const fileItemsDiv = document.getElementById('fileItems');
+                const fileCountBadge = document.getElementById('fileCountBadge');
+                const styleOptions = document.getElementById('styleOptions');
+                const convertBtn = document.getElementById('convertBtn');
+                const clearBtn = document.getElementById('clearBtn');
+
+                fileCountBadge.textContent = this.files.length;
+
+                if (this.files.length === 0) {
+                    fileListDiv.style.display = 'none';
+                    styleOptions.style.display = 'none';
+                    convertBtn.style.display = 'none';
+                    clearBtn.style.display = 'none';
+                    return;
+                }
+
+                fileListDiv.style.display = 'block';
+                styleOptions.style.display = 'block';
+                convertBtn.style.display = 'inline-block';
+                clearBtn.style.display = 'inline-block';
+                convertBtn.disabled = false;
+
+                fileItemsDiv.innerHTML = this.files.map((file, index) => `
+                    <div class="file-item drag-sort" draggable="true" data-index="${index}">
+                        <div class="file-info">
+                            <div class="file-name">
+                                ${index + 1}. ${file.originalName}
+                                ${file.folderPath ? `<span class="folder-indicator">📁 ${file.folderPath}</span>` : ''}
+                            </div>
+                            <div class="file-size">${this.formatFileSize(file.size)}</div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn btn-danger btn-small" onclick="mergeGUI.removeFile(${index})">
+                                <span class="icon">🗑️</span>
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            removeFile(index) {
+                this.files.splice(index, 1);
+                this.updateFileList();
+                this.showMessage('文件已移除', 'info');
+            }
+
+            reorderFiles(draggedElement, targetElement) {
+                const draggedIndex = parseInt(draggedElement.dataset.index);
+                const targetIndex = parseInt(targetElement.dataset.index);
+
+                if (draggedIndex !== targetIndex) {
+                    const draggedFile = this.files[draggedIndex];
+                    this.files.splice(draggedIndex, 1);
+                    this.files.splice(targetIndex, 0, draggedFile);
+                    this.updateFileList();
+                    this.showMessage('文件顺序已更新', 'info');
+                }
+            }
+
+            async convertFiles() {
+                if (this.files.length === 0 || this.isConverting) return;
+
+                this.isConverting = true;
+                const convertBtn = document.getElementById('convertBtn');
+                const progressContainer = document.getElementById('progressContainer');
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+
+                convertBtn.disabled = true;
+                convertBtn.innerHTML = '<div class="loading"></div> 转换中...';
+                progressContainer.style.display = 'block';
+
+                // 模拟进度
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    if (progress > 90) progress = 90;
+                    progressFill.style.width = progress + '%';
+                    progressText.textContent = `转换进度: ${Math.round(progress)}%`;
+                }, 200);
+
+                try {
+                    const styleOptions = this.getStyleOptions();
+                    
+                    const response = await fetch('/merge-convert', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            files: this.files,
+                            outputName: styleOptions.outputName,
+                            styleOptions: styleOptions
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    clearInterval(progressInterval);
+                    progressFill.style.width = '100%';
+                    progressText.textContent = '转换完成!';
+
+                    if (result.success) {
+                        this.showMessage(
+                            `PDF转换成功! 已合并 ${result.fileCount} 个文件`, 
+                            'success'
+                        );
+                        
+                        // 自动下载
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = result.downloadUrl;
+                        downloadLink.download = result.filename;
+                        downloadLink.click();
+
+                        // 刷新历史记录
+                        this.loadHistory();
+                        
+                        // 清理文件
+                        setTimeout(() => this.clearFiles(), 2000);
+                    } else {
+                        this.showMessage('转换失败: ' + result.error, 'error');
+                    }
+
+                } catch (error) {
+                    clearInterval(progressInterval);
+                    this.showMessage('转换失败: ' + error.message, 'error');
+                } finally {
+                    this.isConverting = false;
+                    convertBtn.disabled = false;
+                    convertBtn.innerHTML = '<span class="icon">🔄</span> 合并并转换为PDF';
+                    
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        progressFill.style.width = '0%';
+                    }, 2000);
+                }
+            }
+
+            getStyleOptions() {
+                return {
+                    outputName: document.getElementById('outputName').value || `merged-document-${Date.now()}.pdf`,
+                    fontSize: document.getElementById('fontSize').value,
+                    chineseFont: document.getElementById('chineseFont').value,
+                    fontWeight: document.getElementById('fontWeight').value,
+                    lineSpacing: document.getElementById('lineSpacing').value,
+                    paragraphSpacing: document.getElementById('paragraphSpacing').value,
+                    mathSpacing: document.getElementById('mathSpacing').value,
+                    mathEngine: document.getElementById('mathEngine').value
+                };
+            }
+
+            async clearFiles() {
+                if (this.files.length > 0) {
+                    try {
+                        await fetch('/cleanup', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ files: this.files })
+                        });
+                    } catch (error) {
+                        console.warn('清理文件失败:', error);
+                    }
+                }
+
+                this.files = [];
+                this.updateFileList();
+                document.getElementById('fileInput').value = '';
+                document.getElementById('folderInput').value = '';
+                this.showMessage('文件已清空', 'info');
+            }
+
+            async loadHistory() {
+                try {
+                    const response = await fetch('/history');
+                    const result = await response.json();
+                    this.updateHistoryList(result.files);
+                } catch (error) {
+                    console.error('加载历史记录失败:', error);
+                    document.getElementById('historyList').innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            加载失败: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+
+            updateHistoryList(files) {
+                const historyList = document.getElementById('historyList');
+                
+                if (files.length === 0) {
+                    historyList.innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            暂无历史记录
+                        </div>
+                    `;
+                    return;
+                }
+
+                historyList.innerHTML = files.map(file => `
+                    <div class="history-item">
+                        <div class="history-info">
+                            <div class="history-name">${file.name}</div>
+                            <div class="history-meta">
+                                ${this.formatFileSize(file.size)} • 
+                                ${new Date(file.created).toLocaleString('zh-CN')}
+                            </div>
+                        </div>
+                        <div class="history-actions">
+                            <a href="${file.downloadUrl}" class="btn btn-primary btn-small" download>
+                                <span class="icon">⬇️</span>
+                                下载
+                            </a>
+                            <button class="btn btn-danger btn-small" onclick="mergeGUI.deleteHistoryFile('${file.name}')">
+                                <span class="icon">🗑️</span>
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            async deleteHistoryFile(filename) {
+                if (!confirm('确定要删除这个文件吗？')) return;
+
+                try {
+                    const response = await fetch(`/history/${encodeURIComponent(filename)}`, {
+                        method: 'DELETE'
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        this.showMessage('文件已删除', 'success');
+                        this.loadHistory();
+                    } else {
+                        this.showMessage('删除失败: ' + result.error, 'error');
+                    }
+                } catch (error) {
+                    this.showMessage('删除失败: ' + error.message, 'error');
+                }
+            }
+
+            showMessage(message, type) {
+                const statusMessage = document.getElementById('statusMessage');
+                statusMessage.className = `status-message status-${type}`;
+                statusMessage.textContent = message;
+                statusMessage.style.display = 'block';
+
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 5000);
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+
+        // 初始化应用
+        const mergeGUI = new MergeGUI();
+    </script>
+</body>
+</html>

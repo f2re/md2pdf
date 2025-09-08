@@ -141,4 +141,5 @@ vite.config.ts.timestamp-*
 *.pdf
 *.md
 *.html
+!index.html
 !README.md

@@ -1,0 +1,2977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaTeX公式修复助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 25px;
+            background: #f7fafc;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #718096;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+
+        .mode-content {
+            margin-bottom: 25px;
+        }
+
+        .folder-selection-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .selection-method {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .selection-method:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+
+        .selection-method h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 1.1rem;
+        }
+
+        .folder-upload-area,
+        .files-upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 30px 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: white;
+        }
+
+        .folder-upload-area:hover,
+        .files-upload-area:hover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+            transform: translateY(-2px);
+        }
+
+        .folder-upload-area.has-files,
+        .files-upload-area.has-files {
+            border-color: #48bb78;
+            background-color: #f0fff4;
+        }
+
+        .path-examples {
+            margin-top: 10px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #6c757d;
+        }
+
+        .path-examples code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        .selected-files-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .selected-files-info.show {
+            display: block;
+        }
+
+        .files-count {
+            font-weight: 600;
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .files-list-preview {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+
+        .files-list-preview ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .files-list-preview li {
+            margin-bottom: 5px;
+            color: #424242;
+        }
+
+        .folder-input-section,
+        .text-input-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .folder-path-input,
+        .text-filename-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .folder-path-input:focus,
+        .text-filename-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .text-input {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .help-text {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .folder-results {
+            margin-top: 20px;
+        }
+
+        .folder-summary {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .folder-summary.has-errors {
+            background: #fff5f5;
+            border-color: #fed7d7;
+        }
+
+        .folder-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .folder-stat {
+            text-align: center;
+        }
+
+        .folder-stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .folder-stat-label {
+            font-size: 0.8rem;
+            color: #718096;
+        }
+
+        .files-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .file-header {
+            padding: 12px 15px;
+            background: #f7fafc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .file-header:hover {
+            background: #edf2f7;
+        }
+
+        .file-header.has-errors {
+            background: #fed7d7;
+        }
+
+        .file-header.has-errors:hover {
+            background: #feb2b2;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .file-stats {
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        .file-content {
+            display: none;
+            padding: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .file-content.expanded {
+            display: block;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #718096;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .options-section {
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .check-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .check-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+
+        .check-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .result-info {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .result-info.error {
+            background: #fed7d7;
+            border-color: #feb2b2;
+            color: #c53030;
+        }
+
+        .result-info.success {
+            color: #22543d;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        .stat-card.errors .stat-number {
+            color: #e53e3e;
+        }
+
+        .stat-card.valid .stat-number {
+            color: #38a169;
+        }
+
+        .stat-card.total .stat-number {
+            color: #667eea;
+        }
+
+        .errors-list {
+            margin-top: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .error-item {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .error-header {
+            background: #fed7d7;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .error-title {
+            font-weight: 600;
+            color: #c53030;
+        }
+
+        .error-type {
+            background: #e53e3e;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .error-content {
+            padding: 15px;
+        }
+
+        .formula-display {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+
+        .error-message {
+            color: #c53030;
+            background: #fed7d7;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .correction-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .correction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .correction-title {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .fix-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .fix-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .fix-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .correction-preview {
+            display: none;
+            margin-top: 15px;
+        }
+
+        .correction-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .comparison-side {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .comparison-header {
+            padding: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .comparison-header.original {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .comparison-header.fixed {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .comparison-content {
+            padding: 12px;
+            background: #f7fafc;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            min-height: 60px;
+            overflow-x: auto;
+        }
+
+        .correction-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .accept-btn {
+            background: #48bb78;
+            color: white;
+        }
+
+        .reject-btn {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            opacity: 0.9;
+        }
+
+        .batch-actions {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .batch-btn {
+            background: #38a169;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .batch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(56, 161, 105, 0.4);
+        }
+
+        .batch-btn.danger {
+            background: #e53e3e;
+        }
+
+        .batch-btn.danger:hover {
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+        }
+
+        .provider-selection {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .provider-radio {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .llm-config-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        
+        .settings-btn {
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+        
+        .settings-btn:hover {
+            background: #2d3748;
+        }
+        
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.show {
+            display: block;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+        
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            opacity: 0.7;
+        }
+        
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .settings-tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #4a5568;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+        
+        .tab-btn:hover {
+            background: #f7fafc;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .config-group {
+            margin-bottom: 20px;
+        }
+        
+        .config-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .config-group input,
+        .config-group select,
+        .config-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+        
+        .config-group input:focus,
+        .config-group select:focus,
+        .config-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .config-group small {
+            color: #718096;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .model-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .model-selector select {
+            flex: 1;
+        }
+        
+        .refresh-models-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        
+        .refresh-models-btn:hover {
+            background: #38a169;
+        }
+        
+        .refresh-models-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        .config-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        
+        .test-connection-btn {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+        
+        .test-connection-btn:hover {
+            background: #2c5282;
+        }
+        
+        .test-connection-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        .status-indicator {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-indicator.connected {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status-indicator.disconnected {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .status-indicator.testing {
+            background: #fefcbf;
+            color: #744210;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            background: #f7fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .no-errors {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .success-icon {
+            font-size: 3rem;
+            color: #48bb78;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .correction-comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .summary-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📐 LaTeX公式修复助手</h1>
+            <p>智能检测Markdown中的数学公式错误 | AI纠错 | 一键修复</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <h2 class="section-title">
+                    📂 选择文件
+                </h2>
+                
+                <!-- 检测模式选择 -->
+                <div class="mode-tabs">
+                    <button class="tab-btn active" data-mode="file">📄 单个文件</button>
+                    <button class="tab-btn" data-mode="folder">📁 文件夹批量</button>
+                    <button class="tab-btn" data-mode="text">📝 直接输入</button>
+                </div>
+
+                <!-- 单个文件模式 -->
+                <div class="mode-content" id="file-mode">
+                    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">
+                            点击选择或拖拽Markdown文件到此处<br>
+                            支持 .md 格式文件
+                        </div>
+                        <button class="upload-btn" type="button">选择文件</button>
+                    </div>
+                    <input type="file" id="fileInput" class="file-input" accept=".md,.markdown" />
+                </div>
+
+                <!-- 文件夹模式 -->
+                <div class="mode-content" id="folder-mode" style="display: none;">
+                    <div class="folder-selection-methods">
+                        <!-- 方法1: 文件夹选择器 -->
+                        <div class="selection-method">
+                            <h4>📁 方法一：选择文件夹</h4>
+                            <div class="folder-upload-area" onclick="document.getElementById('folderInput').click()">
+                                <div class="upload-icon">📁</div>
+                                <div class="upload-text">
+                                    点击选择文件夹<br>
+                                    <small>将读取文件夹中的所有 .md 文件</small>
+                                </div>
+                                <button class="upload-btn" type="button">选择文件夹</button>
+                            </div>
+                            <input type="file" id="folderInput" class="file-input" webkitdirectory multiple />
+                            <p class="help-text">✅ 推荐：直接选择包含Markdown文件的文件夹</p>
+                        </div>
+
+                        <!-- 方法2: 多文件选择 -->
+                        <div class="selection-method">
+                            <h4>📄 方法二：选择多个文件</h4>
+                            <div class="files-upload-area" onclick="document.getElementById('multipleFilesInput').click()">
+                                <div class="upload-icon">📄</div>
+                                <div class="upload-text">
+                                    点击选择多个 .md 文件<br>
+                                    <small>可同时选择多个Markdown文件</small>
+                                </div>
+                                <button class="upload-btn" type="button">选择多个文件</button>
+                            </div>
+                            <input type="file" id="multipleFilesInput" class="file-input" accept=".md,.markdown" multiple />
+                        </div>
+
+                        <!-- 方法3: 路径输入 -->
+                        <div class="selection-method">
+                            <h4>📝 方法三：手动输入路径</h4>
+                            <div class="folder-input-section">
+                                <div class="form-group">
+                                    <label for="folderPath">文件夹绝对路径</label>
+                                    <input type="text" id="folderPath" class="folder-path-input" 
+                                           placeholder="例如: C:\Users\用户名\Documents\markdown-files" />
+                                    <div class="path-examples">
+                                        <small>
+                                            <strong>路径示例：</strong><br>
+                                            Windows: <code>C:\Users\用户名\Documents\my-docs</code><br>
+                                            macOS/Linux: <code>/Users/用户名/Documents/my-docs</code>
+                                        </small>
+                                    </div>
+                                </div>
+                                <p class="help-text">⚠️ 注意：需要服务器有访问该路径的权限</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 文本输入模式 -->
+                <div class="mode-content" id="text-mode" style="display: none;">
+                    <div class="text-input-section">
+                        <div class="form-group">
+                            <label for="textInput">Markdown内容</label>
+                            <textarea id="textInput" class="text-input" 
+                                      placeholder="请输入要检查的Markdown内容..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="textFilename">文件名（可选）</label>
+                            <input type="text" id="textFilename" class="text-filename-input" 
+                                   placeholder="untitled.md" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="options-section">
+                    <div class="form-group">
+                        <label>LLM 提供商设置</label>
+                        <div class="llm-config-container">
+                            <!-- LLM 提供商选择 -->
+                            <div class="provider-selection">
+                                <div class="provider-radio">
+                                    <input type="radio" id="lmstudio" name="provider" value="lmstudio" checked>
+                                    <label for="lmstudio">LMStudio</label>
+                                </div>
+                                <div class="provider-radio">
+                                    <input type="radio" id="ollama" name="provider" value="ollama">
+                                    <label for="ollama">Ollama</label>
+                                </div>
+                                <div class="provider-radio">
+                                    <input type="radio" id="openai" name="provider" value="openai">
+                                    <label for="openai">OpenAI</label>
+                                </div>
+                            </div>
+                            
+                            <!-- 设置按钮 -->
+                            <button type="button" class="settings-btn" id="settingsBtn">
+                                ⚙️ 详细设置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LLM 设置模态框 -->
+                <div class="modal" id="settingsModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>LLM 详细设置</h3>
+                            <span class="close" id="closeModal">&times;</span>
+                        </div>
+                        <div class="modal-body">
+                            <div class="settings-tabs">
+                                <button class="tab-btn active" data-tab="lmstudio">LMStudio</button>
+                                <button class="tab-btn" data-tab="ollama">Ollama</button>
+                                <button class="tab-btn" data-tab="openai">OpenAI</button>
+                            </div>
+                            
+                            <!-- LMStudio 设置 -->
+                            <div class="tab-content active" id="tab-lmstudio">
+                                <div class="config-group">
+                                    <label for="lmstudio-endpoint">服务端点</label>
+                                    <input type="text" id="lmstudio-endpoint" value="http://localhost:1234" placeholder="http://localhost:1234">
+                                </div>
+                                <div class="config-group">
+                                    <label for="lmstudio-model">模型名称</label>
+                                    <div class="model-selector">
+                                        <select id="lmstudio-model">
+                                            <option value="qwen/qwen3-4b-thinking-2507">qwen/qwen3-4b-thinking-2507</option>
+                                        </select>
+                                        <button type="button" class="refresh-models-btn" data-provider="lmstudio">🔄</button>
+                                    </div>
+                                </div>
+                                <div class="config-group">
+                                    <label for="lmstudio-prompt">系统提示词</label>
+                                    <textarea id="lmstudio-prompt" rows="3" placeholder="根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式">根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式</textarea>
+                                </div>
+                                <div class="config-status">
+                                    <button type="button" class="test-connection-btn" data-provider="lmstudio">测试连接</button>
+                                    <span class="status-indicator" id="lmstudio-status">未连接</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Ollama 设置 -->
+                            <div class="tab-content" id="tab-ollama">
+                                <div class="config-group">
+                                    <label for="ollama-endpoint">服务端点</label>
+                                    <input type="text" id="ollama-endpoint" value="http://localhost:11434" placeholder="http://localhost:11434">
+                                </div>
+                                <div class="config-group">
+                                    <label for="ollama-model">模型名称</label>
+                                    <div class="model-selector">
+                                        <select id="ollama-model">
+                                            <option value="qwen2.5:7b">qwen2.5:7b</option>
+                                        </select>
+                                        <button type="button" class="refresh-models-btn" data-provider="ollama">🔄</button>
+                                    </div>
+                                </div>
+                                <div class="config-group">
+                                    <label for="ollama-prompt">系统提示词</label>
+                                    <textarea id="ollama-prompt" rows="3" placeholder="根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式">根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式</textarea>
+                                </div>
+                                <div class="config-status">
+                                    <button type="button" class="test-connection-btn" data-provider="ollama">测试连接</button>
+                                    <span class="status-indicator" id="ollama-status">未连接</span>
+                                </div>
+                            </div>
+                            
+                            <!-- OpenAI 设置 -->
+                            <div class="tab-content" id="tab-openai">
+                                <div class="config-group">
+                                    <label for="openai-endpoint">服务端点</label>
+                                    <input type="text" id="openai-endpoint" value="https://api.openai.com" placeholder="https://api.openai.com">
+                                </div>
+                                <div class="config-group">
+                                    <label for="openai-apikey">API Key</label>
+                                    <input type="password" id="openai-apikey" placeholder="sk-...">
+                                    <small>将保存在浏览器本地存储中</small>
+                                </div>
+                                <div class="config-group">
+                                    <label for="openai-model">模型名称</label>
+                                    <div class="model-selector">
+                                        <select id="openai-model">
+                                            <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                                            <option value="gpt-4">gpt-4</option>
+                                            <option value="gpt-4-turbo">gpt-4-turbo</option>
+                                        </select>
+                                        <button type="button" class="refresh-models-btn" data-provider="openai">🔄</button>
+                                    </div>
+                                </div>
+                                <div class="config-group">
+                                    <label for="openai-prompt">系统提示词</label>
+                                    <textarea id="openai-prompt" rows="3" placeholder="根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式">根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式</textarea>
+                                </div>
+                                <div class="config-status">
+                                    <button type="button" class="test-connection-btn" data-provider="openai">测试连接</button>
+                                    <span class="status-indicator" id="openai-status">未连接</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" id="resetSettings">重置设置</button>
+                            <button type="button" class="btn-primary" id="saveSettings">保存设置</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="check-btn" id="checkBtn" disabled>
+                    🧠 开始分析
+                </button>
+                
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div class="result-info" id="resultInfo"></div>
+            </div>
+
+            <div class="results-section">
+                <h2 class="section-title">
+                    🔍 修复结果
+                </h2>
+                
+                <div class="summary-stats" id="summaryStats" style="display: none;">
+                    <div class="stat-card total">
+                        <div class="stat-number" id="totalFormulas">0</div>
+                        <div class="stat-label">总公式数</div>
+                    </div>
+                    <div class="stat-card valid">
+                        <div class="stat-number" id="validFormulas">0</div>
+                        <div class="stat-label">正常公式</div>
+                    </div>
+                    <div class="stat-card errors">
+                        <div class="stat-number" id="errorFormulas">0</div>
+                        <div class="stat-label">错误公式</div>
+                    </div>
+                </div>
+
+                <div class="batch-actions" id="batchActions" style="display: none;">
+                    <h3 style="margin-bottom: 15px; color: #4a5568;">批量操作</h3>
+                    <button class="batch-btn" id="fixAllBtn">🔧 一键修复所有错误</button>
+                    <button class="batch-btn" id="acceptAllBtn" style="display: none;">✅ 接受所有修正</button>
+                    <button class="batch-btn danger" id="rejectAllBtn" style="display: none;">❌ 拒绝所有修正</button>
+                </div>
+                
+                <div class="errors-list" id="errorsList">
+                    <div class="no-errors">
+                        <div>等待文件分析...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let currentResults = null;
+        let corrections = {};
+        let currentMode = 'file';
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.querySelector('.upload-area');
+            const checkBtn = document.getElementById('checkBtn');
+
+            // 模式切换
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+            });
+
+            // 文件选择
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // 文件夹选择
+            document.getElementById('folderInput').addEventListener('change', handleFolderSelect);
+            document.getElementById('multipleFilesInput').addEventListener('change', handleMultipleFilesSelect);
+            
+            // 拖拽上传
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('drop', handleDrop);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            
+            // 检测按钮
+            checkBtn.addEventListener('click', handleCheck);
+
+            // 文本输入监听
+            document.getElementById('textInput').addEventListener('input', handleTextInput);
+            document.getElementById('folderPath').addEventListener('input', handleFolderPathInput);
+
+            // 批量操作按钮
+            document.getElementById('fixAllBtn').addEventListener('click', handleFixAll);
+            document.getElementById('acceptAllBtn').addEventListener('click', handleAcceptAll);
+            document.getElementById('rejectAllBtn').addEventListener('click', handleRejectAll);
+            
+            // LLM设置相关事件监听器
+            setupLLMSettingsEventListeners();
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // 更新标签状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+
+            // 隐藏所有内容
+            document.querySelectorAll('.mode-content').forEach(content => {
+                content.style.display = 'none';
+            });
+
+            // 显示当前模式内容
+            document.getElementById(`${mode}-mode`).style.display = 'block';
+
+            // 重置状态
+            selectedFile = null;
+            currentResults = null;
+            corrections = {};
+            window.selectedFolderFiles = null;
+            resetCheckButton();
+            clearResults();
+            
+            // 重置所有输入
+            document.getElementById('fileInput').value = '';
+            document.getElementById('folderInput').value = '';
+            document.getElementById('multipleFilesInput').value = '';
+            document.getElementById('folderPath').value = '';
+            document.getElementById('textInput').value = '';
+            document.getElementById('textFilename').value = '';
+            
+            // 重置上传区域显示
+            resetUploadAreas();
+        }
+
+        function resetUploadAreas() {
+            // 重置单文件上传区域
+            const uploadArea = document.querySelector('#file-mode .upload-area');
+            if (uploadArea) {
+                uploadArea.innerHTML = `
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">
+                        点击选择或拖拽Markdown文件到此处<br>
+                        支持 .md 格式文件
+                    </div>
+                    <button class="upload-btn" type="button">选择文件</button>
+                `;
+            }
+
+            // 重置文件夹上传区域
+            const folderUploadArea = document.querySelector('.folder-upload-area');
+            if (folderUploadArea) {
+                folderUploadArea.classList.remove('has-files');
+                folderUploadArea.innerHTML = `
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">
+                        点击选择文件夹<br>
+                        <small>将读取文件夹中的所有 .md 文件</small>
+                    </div>
+                    <button class="upload-btn" type="button">选择文件夹</button>
+                `;
+            }
+
+            // 重置多文件上传区域
+            const filesUploadArea = document.querySelector('.files-upload-area');
+            if (filesUploadArea) {
+                filesUploadArea.classList.remove('has-files');
+                filesUploadArea.innerHTML = `
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">
+                        点击选择多个 .md 文件<br>
+                        <small>可同时选择多个Markdown文件</small>
+                    </div>
+                    <button class="upload-btn" type="button">选择多个文件</button>
+                `;
+            }
+
+            // 隐藏文件信息显示
+            document.querySelectorAll('.selected-files-info').forEach(info => {
+                info.classList.remove('show');
+            });
+        }
+
+        function handleTextInput() {
+            const textInput = document.getElementById('textInput');
+            const checkBtn = document.getElementById('checkBtn');
+            checkBtn.disabled = !textInput.value.trim();
+        }
+
+        function handleFolderPathInput() {
+            const folderInput = document.getElementById('folderPath');
+            const checkBtn = document.getElementById('checkBtn');
+            const inputValue = folderInput.value.trim();
+            
+            // 重置选择器选择的文件
+            window.selectedFolderFiles = null;
+            
+            // 检查是否有输入路径
+            checkBtn.disabled = !inputValue;
+            
+            // 实时路径验证提示
+            const pathExamples = folderInput.parentElement.querySelector('.path-examples');
+            if (inputValue) {
+                // 简单的路径格式验证
+                const isWindowsPath = /^[A-Za-z]:\\/.test(inputValue);
+                const isUnixPath = /^\//.test(inputValue);
+                const isRelativePath = /^[^\/\\]/.test(inputValue) && !isWindowsPath;
+                
+                let validationMessage = '';
+                if (isRelativePath) {
+                    validationMessage = '<span style="color: #e53e3e;">⚠️ 建议使用绝对路径</span><br>';
+                } else if (isWindowsPath || isUnixPath) {
+                    validationMessage = '<span style="color: #38a169;">✅ 路径格式正确</span><br>';
+                }
+                
+                pathExamples.innerHTML = `
+                    <small>
+                        ${validationMessage}
+                        <strong>路径示例：</strong><br>
+                        Windows: <code>C:\\Users\\用户名\\Documents\\my-docs</code><br>
+                        macOS/Linux: <code>/Users/用户名/Documents/my-docs</code>
+                    </small>
+                `;
+            } else {
+                pathExamples.innerHTML = `
+                    <small>
+                        <strong>路径示例：</strong><br>
+                        Windows: <code>C:\\Users\\用户名\\Documents\\my-docs</code><br>
+                        macOS/Linux: <code>/Users/用户名/Documents/my-docs</code>
+                    </small>
+                `;
+            }
+        }
+
+        function selectFolder() {
+            // 由于浏览器安全限制，无法直接选择文件夹
+            // 提示用户手动输入路径
+            const folderInput = document.getElementById('folderPath');
+            folderInput.focus();
+            showResult('info', '请手动输入文件夹路径。注意：由于浏览器安全限制，无法直接选择文件夹。');
+        }
+
+        function resetCheckButton() {
+            const checkBtn = document.getElementById('checkBtn');
+            checkBtn.disabled = true;
+            checkBtn.textContent = '🧠 开始分析';
+        }
+
+        function clearResults() {
+            document.getElementById('summaryStats').style.display = 'none';
+            document.getElementById('batchActions').style.display = 'none';
+            document.getElementById('errorsList').innerHTML = `
+                <div class="no-errors">
+                    <div>等待分析...</div>
+                </div>
+            `;
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                updateUploadArea(file.name);
+                document.getElementById('checkBtn').disabled = false;
+            }
+        }
+
+        function handleFolderSelect(event) {
+            const files = Array.from(event.target.files);
+            const mdFiles = files.filter(file => 
+                file.name.endsWith('.md') || file.name.endsWith('.markdown')
+            );
+            
+            if (mdFiles.length > 0) {
+                updateFolderSelectionDisplay('folderInput', mdFiles);
+                document.getElementById('checkBtn').disabled = false;
+                
+                // 存储选中的文件以便后续处理
+                window.selectedFolderFiles = mdFiles;
+            } else {
+                showResult('error', '所选文件夹中没有找到Markdown文件');
+            }
+        }
+
+        function handleMultipleFilesSelect(event) {
+            const files = Array.from(event.target.files);
+            const mdFiles = files.filter(file => 
+                file.name.endsWith('.md') || file.name.endsWith('.markdown')
+            );
+            
+            if (mdFiles.length > 0) {
+                updateFolderSelectionDisplay('multipleFilesInput', mdFiles);
+                document.getElementById('checkBtn').disabled = false;
+                
+                // 存储选中的文件以便后续处理
+                window.selectedFolderFiles = mdFiles;
+            } else {
+                showResult('error', '请选择Markdown文件(.md)');
+            }
+        }
+
+        function updateFolderSelectionDisplay(inputId, files) {
+            const uploadArea = document.querySelector(`#${inputId}`).parentElement.querySelector('.folder-upload-area, .files-upload-area');
+            uploadArea.classList.add('has-files');
+            
+            uploadArea.innerHTML = `
+                <div class="upload-icon">✅</div>
+                <div class="upload-text">
+                    已选择 ${files.length} 个Markdown文件<br>
+                    点击可重新选择
+                </div>
+            `;
+
+            // 显示文件列表
+            const selectionMethod = uploadArea.closest('.selection-method');
+            let filesInfo = selectionMethod.querySelector('.selected-files-info');
+            if (!filesInfo) {
+                filesInfo = document.createElement('div');
+                filesInfo.className = 'selected-files-info';
+                selectionMethod.appendChild(filesInfo);
+            }
+            
+            filesInfo.innerHTML = `
+                <div class="files-count">共选择 ${files.length} 个文件：</div>
+                <div class="files-list-preview">
+                    <ul>
+                        ${files.slice(0, 10).map(file => `<li>${file.webkitRelativePath || file.name}</li>`).join('')}
+                        ${files.length > 10 ? `<li>... 还有 ${files.length - 10} 个文件</li>` : ''}
+                    </ul>
+                </div>
+            `;
+            filesInfo.classList.add('show');
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.name.endsWith('.md') || file.name.endsWith('.markdown')) {
+                    selectedFile = file;
+                    updateUploadArea(file.name);
+                    document.getElementById('checkBtn').disabled = false;
+                } else {
+                    showResult('error', '请选择Markdown文件(.md)');
+                }
+            }
+        }
+
+        function updateUploadArea(filename) {
+            const uploadArea = document.querySelector('.upload-area');
+            uploadArea.innerHTML = `
+                <div class="upload-icon">✅</div>
+                <div class="upload-text">
+                    已选择文件: <strong>${filename}</strong><br>
+                    点击可重新选择文件
+                </div>
+            `;
+        }
+
+        async function handleCheck() {
+            if (currentMode === 'file') {
+                await handleFileCheck();
+            } else if (currentMode === 'folder') {
+                await handleFolderCheck();
+            } else if (currentMode === 'text') {
+                await handleTextCheck();
+            }
+        }
+
+        async function handleFileCheck() {
+            if (!selectedFile) {
+                showResult('error', '请选择Markdown文件');
+                return;
+            }
+
+            const checkBtn = document.getElementById('checkBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            // 显示进度条
+            checkBtn.disabled = true;
+            checkBtn.textContent = '🔄 分析中...';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '30%';
+
+            try {
+                const formData = new FormData();
+                formData.append('markdown', selectedFile);
+                
+                progressFill.style.width = '60%';
+
+                const response = await fetch('/check', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressFill.style.width = '90%';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    progressFill.style.width = '100%';
+                    currentResults = result.results;
+                    corrections = {};
+                    displayResults(result.results);
+                    showResult('success', `分析完成！共分析 ${result.results.totalFormulas} 个公式，发现 ${result.results.errors.length} 个错误`);
+                } else {
+                    throw new Error(result.message || '分析失败');
+                }
+
+            } catch (error) {
+                showResult('error', '分析失败: ' + error.message);
+            } finally {
+                // 恢复按钮状态
+                setTimeout(() => {
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = '🧠 开始分析';
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        async function handleFolderCheck() {
+            // 检查是否有通过文件选择器选择的文件
+            if (window.selectedFolderFiles && window.selectedFolderFiles.length > 0) {
+                await handleFilesArrayCheck();
+                return;
+            }
+
+            // 否则使用路径输入的方式
+            const folderPath = document.getElementById('folderPath').value.trim();
+            if (!folderPath) {
+                showResult('error', '请选择文件夹或输入文件夹路径');
+                return;
+            }
+
+            const checkBtn = document.getElementById('checkBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            checkBtn.disabled = true;
+            checkBtn.textContent = '🔄 批量分析中...';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '30%';
+
+            try {
+                progressFill.style.width = '60%';
+
+                const response = await fetch('/check-folder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ folderPath })
+                });
+
+                progressFill.style.width = '90%';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    progressFill.style.width = '100%';
+                    currentResults = result.results;
+                    corrections = {};
+                    displayFolderResults(result.results);
+                    showResult('success', `文件夹分析完成！共分析 ${result.results.totalFiles} 个文件，${result.results.totalFormulas} 个公式，发现 ${result.results.totalErrors} 个错误`);
+                } else {
+                    throw new Error(result.message || '文件夹分析失败');
+                }
+
+            } catch (error) {
+                showResult('error', '文件夹分析失败: ' + error.message);
+            } finally {
+                setTimeout(() => {
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = '🧠 开始分析';
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        async function handleFilesArrayCheck() {
+            const files = window.selectedFolderFiles;
+            const checkBtn = document.getElementById('checkBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            checkBtn.disabled = true;
+            checkBtn.textContent = '🔄 批量分析中...';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '30%';
+
+            try {
+                const results = {
+                    folderPath: '浏览器选择的文件',
+                    totalFiles: files.length,
+                    processedFiles: 0,
+                    filesWithErrors: 0,
+                    totalFormulas: 0,
+                    totalErrors: 0,
+                    files: []
+                };
+
+                // 处理每个文件
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const content = await readFileAsText(file);
+                    const fileResult = await checkFileContent(content, file.webkitRelativePath || file.name);
+                    
+                    results.files.push({
+                        path: file.webkitRelativePath || file.name,
+                        fullPath: file.webkitRelativePath || file.name,
+                        ...fileResult
+                    });
+                    
+                    results.processedFiles++;
+                    results.totalFormulas += fileResult.totalFormulas;
+                    results.totalErrors += fileResult.errors.length;
+                    
+                    if (fileResult.hasErrors) {
+                        results.filesWithErrors++;
+                    }
+
+                    // 更新进度
+                    const progress = 30 + (i + 1) / files.length * 60;
+                    progressFill.style.width = progress + '%';
+                }
+
+                progressFill.style.width = '100%';
+                currentResults = results;
+                corrections = {};
+                displayFolderResults(results);
+                showResult('success', `文件分析完成！共分析 ${results.totalFiles} 个文件，${results.totalFormulas} 个公式，发现 ${results.totalErrors} 个错误`);
+
+            } catch (error) {
+                showResult('error', '文件分析失败: ' + error.message);
+            } finally {
+                setTimeout(() => {
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = '🧠 开始分析';
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        async function checkFileContent(content, filename) {
+            const response = await fetch('/check-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: content,
+                    filename: filename
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                return result.results;
+            } else {
+                throw new Error(result.message || '检测失败');
+            }
+        }
+
+        async function handleTextCheck() {
+            const textContent = document.getElementById('textInput').value.trim();
+            const filename = document.getElementById('textFilename').value.trim() || 'untitled.md';
+            
+            if (!textContent) {
+                showResult('error', '请输入Markdown内容');
+                return;
+            }
+
+            const checkBtn = document.getElementById('checkBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            checkBtn.disabled = true;
+            checkBtn.textContent = '🔄 分析中...';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '30%';
+
+            try {
+                progressFill.style.width = '60%';
+
+                const response = await fetch('/check-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: textContent,
+                        filename: filename
+                    })
+                });
+
+                progressFill.style.width = '90%';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    progressFill.style.width = '100%';
+                    currentResults = result.results;
+                    corrections = {};
+                    displayResults(result.results);
+                    showResult('success', `分析完成！共分析 ${result.results.totalFormulas} 个公式，发现 ${result.results.errors.length} 个错误`);
+                } else {
+                    throw new Error(result.message || '分析失败');
+                }
+
+            } catch (error) {
+                showResult('error', '分析失败: ' + error.message);
+            } finally {
+                setTimeout(() => {
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = '🧠 开始分析';
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        function displayFolderResults(results) {
+            // 更新总体统计
+            document.getElementById('totalFormulas').textContent = results.totalFormulas;
+            document.getElementById('validFormulas').textContent = results.totalFormulas - results.totalErrors;
+            document.getElementById('errorFormulas').textContent = results.totalErrors;
+            document.getElementById('summaryStats').style.display = 'grid';
+
+            // 显示批量操作
+            if (results.totalErrors > 0) {
+                document.getElementById('batchActions').style.display = 'block';
+                document.getElementById('fixAllBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('batchActions').style.display = 'none';
+            }
+
+            // 显示文件夹结果
+            const errorsList = document.getElementById('errorsList');
+            
+            if (results.totalErrors === 0) {
+                errorsList.innerHTML = `
+                    <div class="no-errors">
+                        <div class="success-icon">🎉</div>
+                        <div>所有文件都正常！未发现错误。</div>
+                    </div>
+                `;
+                return;
+            }
+
+            errorsList.innerHTML = `
+                <div class="folder-results">
+                    <div class="folder-summary ${results.totalErrors > 0 ? 'has-errors' : ''}">
+                        <div class="folder-stats">
+                            <div class="folder-stat">
+                                <div class="folder-stat-number">${results.totalFiles}</div>
+                                <div class="folder-stat-label">总文件数</div>
+                            </div>
+                            <div class="folder-stat">
+                                <div class="folder-stat-number">${results.processedFiles}</div>
+                                <div class="folder-stat-label">已处理</div>
+                            </div>
+                            <div class="folder-stat">
+                                <div class="folder-stat-number">${results.filesWithErrors}</div>
+                                <div class="folder-stat-label">有错误文件</div>
+                            </div>
+                        </div>
+                        <p style="margin: 0; color: #4a5568;">文件夹: ${results.folderPath}</p>
+                    </div>
+                    
+                    <div class="files-list">
+                        ${results.files.map((file, index) => `
+                            <div class="file-item">
+                                <div class="file-header ${file.hasErrors ? 'has-errors' : ''}" onclick="toggleFileContent(${index})">
+                                    <div class="file-name">${file.path}</div>
+                                    <div class="file-stats">
+                                        ${file.totalFormulas} 公式 | ${file.errors.length} 错误
+                                    </div>
+                                </div>
+                                <div class="file-content" id="file-content-${index}">
+                                    ${file.hasErrors ? renderFileErrors(file, index) : '<p style="color: #22543d;">✅ 此文件没有错误</p>'}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFileErrors(file, fileIndex) {
+            return file.errors.map((error, errorIndex) => `
+                <div class="error-item" id="file-${fileIndex}-error-${errorIndex}">
+                    <div class="error-header">
+                        <div class="error-title">公式错误 #${errorIndex + 1}</div>
+                        <div class="error-type">${error.type}</div>
+                    </div>
+                    <div class="error-content">
+                        <div class="formula-display">${escapeHtml(error.raw)}</div>
+                        <div class="error-message">${escapeHtml(error.error)}</div>
+                        
+                        <div class="correction-section">
+                            <div class="correction-header">
+                                <div class="correction-title">LLM 智能纠错</div>
+                                <button class="fix-btn" onclick="fixFileFormula(${fileIndex}, ${errorIndex})">🔧 获取修正建议</button>
+                            </div>
+                            <div class="correction-preview" id="file-${fileIndex}-correction-${errorIndex}">
+                                <!-- 修正预览将在这里显示 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleFileContent(index) {
+            const content = document.getElementById(`file-content-${index}`);
+            content.classList.toggle('expanded');
+        }
+
+        async function fixFileFormula(fileIndex, errorIndex) {
+            const file = currentResults.files[fileIndex];
+            const error = file.errors[errorIndex];
+            const provider = document.querySelector('input[name="provider"]:checked').value;
+            const providerConfig = getCurrentProviderConfig();
+            const fixBtn = document.querySelector(`#file-${fileIndex}-error-${errorIndex} .fix-btn`);
+            
+            fixBtn.disabled = true;
+            fixBtn.textContent = '🔄 修正中...';
+
+            try {
+                const response = await fetch('/fix-formula', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        formula: error.content,
+                        error: error.error,
+                        provider: provider,
+                        config: providerConfig.config
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const correctionKey = `${fileIndex}-${errorIndex}`;
+                    corrections[correctionKey] = result;
+                    displayFileCorrection(fileIndex, errorIndex, result);
+                    fixBtn.style.display = 'none';
+                } else {
+                    throw new Error(result.message || '修正失败');
+                }
+
+            } catch (error) {
+                showResult('error', '修正失败: ' + error.message);
+                fixBtn.disabled = false;
+                fixBtn.textContent = '🔧 获取修正建议';
+            }
+        }
+
+        function displayFileCorrection(fileIndex, errorIndex, result) {
+            const correctionDiv = document.getElementById(`file-${fileIndex}-correction-${errorIndex}`);
+            
+            correctionDiv.innerHTML = `
+                <div class="correction-comparison">
+                    <div class="comparison-side">
+                        <div class="comparison-header original">原始公式</div>
+                        <div class="comparison-content">${escapeHtml(result.original)}</div>
+                    </div>
+                    <div class="comparison-side">
+                        <div class="comparison-header fixed">修正建议</div>
+                        <div class="comparison-content">${escapeHtml(result.fixed)}</div>
+                    </div>
+                </div>
+                <div class="correction-actions">
+                    <button class="action-btn accept-btn" onclick="acceptFileCorrection(${fileIndex}, ${errorIndex})">✅ 接受修正</button>
+                    <button class="action-btn reject-btn" onclick="rejectFileCorrection(${fileIndex}, ${errorIndex})">❌ 拒绝修正</button>
+                </div>
+            `;
+            
+            correctionDiv.style.display = 'block';
+            
+            // 显示接受/拒绝全部按钮
+            document.getElementById('acceptAllBtn').style.display = 'inline-block';
+            document.getElementById('rejectAllBtn').style.display = 'inline-block';
+        }
+
+        function acceptFileCorrection(fileIndex, errorIndex) {
+            const errorItem = document.getElementById(`file-${fileIndex}-error-${errorIndex}`);
+            errorItem.style.border = '2px solid #48bb78';
+            errorItem.style.background = '#f0fff4';
+            
+            const correctionDiv = document.getElementById(`file-${fileIndex}-correction-${errorIndex}`);
+            correctionDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #22543d; background: #c6f6d5; border-radius: 6px;">
+                    ✅ 已接受此修正建议
+                </div>
+            `;
+            
+            const correctionKey = `${fileIndex}-${errorIndex}`;
+            corrections[correctionKey].accepted = true;
+            updateApplyButton();
+        }
+
+        function rejectFileCorrection(fileIndex, errorIndex) {
+            const errorItem = document.getElementById(`file-${fileIndex}-error-${errorIndex}`);
+            errorItem.style.border = '2px solid #e53e3e';
+            errorItem.style.background = '#fff5f5';
+            
+            const correctionDiv = document.getElementById(`file-${fileIndex}-correction-${errorIndex}`);
+            correctionDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #c53030; background: #fed7d7; border-radius: 6px;">
+                    ❌ 已拒绝此修正建议
+                </div>
+            `;
+            
+            const correctionKey = `${fileIndex}-${errorIndex}`;
+            corrections[correctionKey].accepted = false;
+            updateApplyButton();
+        }
+
+        function displayResults(results) {
+            // 更新统计信息
+            document.getElementById('totalFormulas').textContent = results.totalFormulas;
+            document.getElementById('validFormulas').textContent = results.validFormulas;
+            document.getElementById('errorFormulas').textContent = results.errors.length;
+            document.getElementById('summaryStats').style.display = 'grid';
+
+            // 显示批量操作
+            if (results.errors.length > 0) {
+                document.getElementById('batchActions').style.display = 'block';
+                document.getElementById('fixAllBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('batchActions').style.display = 'none';
+            }
+
+            // 显示错误列表
+            const errorsList = document.getElementById('errorsList');
+            
+            if (results.errors.length === 0) {
+                errorsList.innerHTML = `
+                    <div class="no-errors">
+                        <div class="success-icon">🎉</div>
+                        <div>所有公式都正常！未发现错误。</div>
+                    </div>
+                `;
+                return;
+            }
+
+            errorsList.innerHTML = results.errors.map((error, index) => `
+                <div class="error-item" id="error-${index}">
+                    <div class="error-header">
+                        <div class="error-title">公式错误 #${index + 1}</div>
+                        <div class="error-type">${error.type}</div>
+                    </div>
+                    <div class="error-content">
+                        <div class="formula-display">${escapeHtml(error.raw)}</div>
+                        <div class="error-message">${escapeHtml(error.error)}</div>
+                        
+                        <div class="correction-section">
+                            <div class="correction-header">
+                                <div class="correction-title">LLM 智能纠错</div>
+                                <button class="fix-btn" onclick="fixFormula(${index})">🔧 获取修正建议</button>
+                            </div>
+                            <div class="correction-preview" id="correction-${index}">
+                                <!-- 修正预览将在这里显示 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function fixFormula(index) {
+            const error = currentResults.errors[index];
+            const provider = document.querySelector('input[name="provider"]:checked').value;
+            const providerConfig = getCurrentProviderConfig();
+            const fixBtn = document.querySelector(`#error-${index} .fix-btn`);
+            
+            fixBtn.disabled = true;
+            fixBtn.textContent = '🔄 修正中...';
+
+            try {
+                const response = await fetch('/fix-formula', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        formula: error.content,
+                        error: error.error,
+                        provider: provider,
+                        config: providerConfig.config
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    corrections[index] = result;
+                    displayCorrection(index, result);
+                    fixBtn.style.display = 'none';
+                } else {
+                    throw new Error(result.message || '修正失败');
+                }
+
+            } catch (error) {
+                showResult('error', '修正失败: ' + error.message);
+                fixBtn.disabled = false;
+                fixBtn.textContent = '🔧 获取修正建议';
+            }
+        }
+
+        function displayCorrection(index, result) {
+            const correctionDiv = document.getElementById(`correction-${index}`);
+            
+            correctionDiv.innerHTML = `
+                <div class="correction-comparison">
+                    <div class="comparison-side">
+                        <div class="comparison-header original">原始公式</div>
+                        <div class="comparison-content">${escapeHtml(result.original)}</div>
+                    </div>
+                    <div class="comparison-side">
+                        <div class="comparison-header fixed">修正建议</div>
+                        <div class="comparison-content">${escapeHtml(result.fixed)}</div>
+                    </div>
+                </div>
+                <div class="correction-actions">
+                    <button class="action-btn accept-btn" onclick="acceptCorrection(${index})">✅ 接受修正</button>
+                    <button class="action-btn reject-btn" onclick="rejectCorrection(${index})">❌ 拒绝修正</button>
+                </div>
+            `;
+            
+            correctionDiv.style.display = 'block';
+            
+            // 显示接受/拒绝全部按钮
+            document.getElementById('acceptAllBtn').style.display = 'inline-block';
+            document.getElementById('rejectAllBtn').style.display = 'inline-block';
+        }
+
+        function acceptCorrection(index) {
+            const errorItem = document.getElementById(`error-${index}`);
+            errorItem.style.border = '2px solid #48bb78';
+            errorItem.style.background = '#f0fff4';
+            
+            const correctionDiv = document.getElementById(`correction-${index}`);
+            correctionDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #22543d; background: #c6f6d5; border-radius: 6px;">
+                    ✅ 已接受此修正建议
+                </div>
+            `;
+            
+            corrections[index].accepted = true;
+            updateApplyButton();
+        }
+
+        function rejectCorrection(index) {
+            const errorItem = document.getElementById(`error-${index}`);
+            errorItem.style.border = '2px solid #e53e3e';
+            errorItem.style.background = '#fff5f5';
+            
+            const correctionDiv = document.getElementById(`correction-${index}`);
+            correctionDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #c53030; background: #fed7d7; border-radius: 6px;">
+                    ❌ 已拒绝此修正建议
+                </div>
+            `;
+            
+            corrections[index].accepted = false;
+            updateApplyButton();
+        }
+
+        async function handleFixAll() {
+            const errors = currentResults.errors;
+            const provider = document.querySelector('input[name="provider"]:checked').value;
+            const fixAllBtn = document.getElementById('fixAllBtn');
+            
+            fixAllBtn.disabled = true;
+            fixAllBtn.textContent = '🔄 批量修正中...';
+
+            try {
+                const response = await fetch('/fix-batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        errors: errors.map((error, index) => ({
+                            id: index,
+                            formula: error.content,
+                            error: error.error
+                        })),
+                        provider: provider
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    result.results.forEach(correction => {
+                        if (correction.success) {
+                            corrections[correction.id] = {
+                                original: correction.original,
+                                fixed: correction.fixed,
+                                validation: correction.validation
+                            };
+                            displayCorrection(correction.id, corrections[correction.id]);
+                        }
+                    });
+                    
+                    showResult('success', `批量修正完成！成功修正 ${result.results.filter(r => r.success).length} 个公式`);
+                } else {
+                    throw new Error(result.message || '批量修正失败');
+                }
+
+            } catch (error) {
+                showResult('error', '批量修正失败: ' + error.message);
+            } finally {
+                fixAllBtn.disabled = false;
+                fixAllBtn.textContent = '🔧 一键修复所有错误';
+            }
+        }
+
+        function handleAcceptAll() {
+            if (currentMode === 'folder' && currentResults.files) {
+                // 文件夹模式：处理所有文件的错误
+                Object.keys(corrections).forEach(correctionKey => {
+                    if (correctionKey.includes('-')) {
+                        const [fileIndex, errorIndex] = correctionKey.split('-').map(Number);
+                        acceptFileCorrection(fileIndex, errorIndex);
+                    } else {
+                        acceptCorrection(parseInt(correctionKey));
+                    }
+                });
+            } else {
+                // 单文件模式
+                Object.keys(corrections).forEach(index => {
+                    acceptCorrection(parseInt(index));
+                });
+            }
+        }
+
+        function handleRejectAll() {
+            if (currentMode === 'folder' && currentResults.files) {
+                // 文件夹模式：处理所有文件的错误
+                Object.keys(corrections).forEach(correctionKey => {
+                    if (correctionKey.includes('-')) {
+                        const [fileIndex, errorIndex] = correctionKey.split('-').map(Number);
+                        rejectFileCorrection(fileIndex, errorIndex);
+                    } else {
+                        rejectCorrection(parseInt(correctionKey));
+                    }
+                });
+            } else {
+                // 单文件模式
+                Object.keys(corrections).forEach(index => {
+                    rejectCorrection(parseInt(index));
+                });
+            }
+        }
+
+        function updateApplyButton() {
+            const acceptedCount = Object.values(corrections).filter(c => c.accepted === true).length;
+            
+            if (acceptedCount > 0) {
+                let existingBtn = document.getElementById('applyBtn');
+                if (!existingBtn) {
+                    const batchActions = document.getElementById('batchActions');
+                    const applyBtn = document.createElement('button');
+                    applyBtn.id = 'applyBtn';
+                    applyBtn.className = 'batch-btn';
+                    applyBtn.style.background = '#667eea';
+                    applyBtn.onclick = handleApplyFixes;
+                    batchActions.appendChild(applyBtn);
+                    existingBtn = applyBtn;
+                }
+                // 更新按钮文本
+                existingBtn.textContent = `📝 替换 ${acceptedCount} 个文件`;
+                existingBtn.style.display = 'inline-block';
+            } else {
+                // 如果没有接受的修正，隐藏按钮
+                const existingBtn = document.getElementById('applyBtn');
+                if (existingBtn) {
+                    existingBtn.style.display = 'none';
+                }
+            }
+        }
+
+        async function handleApplyFixes() {
+            if (currentMode === 'folder' && currentResults.files) {
+                await handleFolderApplyFixes();
+            } else {
+                await handleSingleFileApplyFixes();
+            }
+        }
+
+        // 辅助函数：应用修正到内容
+        function applyFixesToContent(content, fixes) {
+            let modifiedContent = content;
+            
+            // 按位置倒序排列，避免位置偏移
+            const sortedFixes = fixes.sort((a, b) => b.position - a.position);
+            
+            for (const fix of sortedFixes) {
+                if (fix.accepted && fix.fixed) {
+                    modifiedContent = modifiedContent.substring(0, fix.position) + 
+                                    fix.fixed + 
+                                    modifiedContent.substring(fix.position + fix.original.length);
+                }
+            }
+            
+            return modifiedContent;
+        }
+
+        async function handleSingleFileApplyFixes() {
+            const acceptedFixes = [];
+            
+            Object.keys(corrections).forEach(index => {
+                if (corrections[index].accepted === true) {
+                    const error = currentResults.errors[index];
+                    acceptedFixes.push({
+                        position: error.position,
+                        original: error.raw,
+                        fixed: corrections[index].fixed,
+                        accepted: true
+                    });
+                }
+            });
+
+            if (acceptedFixes.length === 0) {
+                showResult('error', '没有接受的修正');
+                return;
+            }
+
+            try {
+                let content, filename;
+                
+                if (currentMode === 'text') {
+                    // 文本模式：直接更新文本框内容
+                    content = document.getElementById('textInput').value;
+                    filename = document.getElementById('textFilename').value.trim() || 'untitled.md';
+                    
+                    const modifiedContent = applyFixesToContent(content, acceptedFixes);
+                    document.getElementById('textInput').value = modifiedContent;
+                    showResult('success', `修正已应用到文本框！共应用 ${acceptedFixes.length} 个修正`);
+                    return;
+                } else {
+                    // 文件模式：替换原文件
+                    if (!selectedFile) {
+                        showResult('error', '没有选择的文件');
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    content = await new Promise((resolve) => {
+                        reader.onload = e => resolve(e.target.result);
+                        reader.readAsText(selectedFile);
+                    });
+                    filename = selectedFile.name;
+                }
+
+                // 调用后端API获取修正后的内容
+                const response = await fetch('/apply-fixes-browser', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        fixes: acceptedFixes,
+                        filename: filename
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 创建新的文件对象并触发下载，实现"替换"效果
+                    const blob = new Blob([result.content], { type: 'text/markdown' });
+                    const url = URL.createObjectURL(blob);
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = filename;
+                    downloadLink.style.display = 'none';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                    URL.revokeObjectURL(url);
+                    
+                    showResult('success', `文件已更新！共应用 ${result.appliedFixes} 个修正。请查看下载的文件`);
+                } else {
+                    throw new Error(result.message || '应用修正失败');
+                }
+
+            } catch (error) {
+                showResult('error', '应用修正失败: ' + error.message);
+            }
+        }
+
+        async function handleFolderApplyFixes() {
+            // 按文件分组整理修正
+            const fileFixesMap = new Map();
+            
+            Object.keys(corrections).forEach(correctionKey => {
+                if (corrections[correctionKey].accepted === true) {
+                    if (correctionKey.includes('-')) {
+                        // 文件夹模式：fileIndex-errorIndex
+                        const [fileIndex, errorIndex] = correctionKey.split('-').map(Number);
+                        const file = currentResults.files[fileIndex];
+                        const error = file.errors[errorIndex];
+                        
+                        if (!fileFixesMap.has(fileIndex)) {
+                            fileFixesMap.set(fileIndex, {
+                                file: file,
+                                fixes: []
+                            });
+                        }
+                        
+                        fileFixesMap.get(fileIndex).fixes.push({
+                            position: error.position,
+                            original: error.raw,
+                            fixed: corrections[correctionKey].fixed,
+                            accepted: true
+                        });
+                    }
+                }
+            });
+
+            if (fileFixesMap.size === 0) {
+                showResult('error', '没有接受的修正');
+                return;
+            }
+
+            try {
+                const results = [];
+                
+                // 处理每个有修正的文件
+                for (const [fileIndex, fileData] of fileFixesMap) {
+                    let content;
+                    
+                    if (window.selectedFolderFiles) {
+                        // 浏览器选择的文件：读取内容并下载替换
+                        const file = window.selectedFolderFiles.find(f => 
+                            (f.webkitRelativePath || f.name) === fileData.file.path
+                        );
+                        
+                        if (file) {
+                            content = await readFileAsText(file);
+                            
+                            // 使用浏览器API处理文件替换
+                            const response = await fetch('/apply-fixes-browser', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    content: content,
+                                    fixes: fileData.fixes,
+                                    filename: file.name
+                                })
+                            });
+
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                                // 创建下载链接实现文件替换
+                                const blob = new Blob([result.content], { type: 'text/markdown' });
+                                const url = URL.createObjectURL(blob);
+                                const downloadLink = document.createElement('a');
+                                downloadLink.href = url;
+                                downloadLink.download = file.name;
+                                downloadLink.style.display = 'none';
+                                document.body.appendChild(downloadLink);
+                                downloadLink.click();
+                                document.body.removeChild(downloadLink);
+                                URL.revokeObjectURL(url);
+                                
+                                results.push({
+                                    originalFile: fileData.file.path,
+                                    replaced: true,
+                                    appliedFixes: result.appliedFixes
+                                });
+                            }
+                        } else {
+                            throw new Error(`无法找到文件: ${fileData.file.path}`);
+                        }
+                    } else {
+                        // 服务器路径文件：直接替换原文件
+                        const response = await fetch('/read-file', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                filePath: fileData.file.fullPath
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`无法读取文件: ${fileData.file.path}`);
+                        }
+                        
+                        const fileResult = await response.json();
+                        content = fileResult.content;
+
+                        // 直接替换原文件
+                        const applyResponse = await fetch('/apply-fixes-inplace', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                content: content,
+                                fixes: fileData.fixes,
+                                filePath: fileData.file.fullPath,
+                                mode: 'folder'
+                            })
+                        });
+
+                        const applyResult = await applyResponse.json();
+                        
+                        if (applyResult.success) {
+                            results.push({
+                                originalFile: fileData.file.path,
+                                replaced: true,
+                                appliedFixes: applyResult.appliedFixes
+                            });
+                        } else {
+                            console.error(`应用修正失败 ${fileData.file.path}:`, applyResult.message);
+                        }
+                    }
+                }
+
+                if (results.length > 0) {
+                    const totalFixes = results.reduce((sum, r) => sum + r.appliedFixes, 0);
+                    const browserFiles = results.filter(r => window.selectedFolderFiles);
+                    const serverFiles = results.filter(r => !window.selectedFolderFiles);
+                    
+                    if (browserFiles.length > 0 && serverFiles.length === 0) {
+                        showResult('success', `文件已更新！共处理 ${results.length} 个文件，应用 ${totalFixes} 个修正。请查看下载的文件`);
+                    } else {
+                        showResult('success', `文件已直接更新！共处理 ${results.length} 个原文件，应用 ${totalFixes} 个修正`);
+                    }
+                } else {
+                    showResult('error', '没有成功应用的修正');
+                }
+
+            } catch (error) {
+                showResult('error', '批量应用修正失败: ' + error.message);
+            }
+        }
+
+        function showResult(type, message) {
+            const resultInfo = document.getElementById('resultInfo');
+            resultInfo.className = `result-info ${type}`;
+            resultInfo.innerHTML = message;
+            resultInfo.style.display = 'block';
+
+            setTimeout(() => {
+                if (!resultInfo.querySelector('a')) {
+                    resultInfo.style.display = 'none';
+                }
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // ===============================
+        // LLM 设置相关功能
+        // ===============================
+        
+        // LLM 配置数据
+        let llmConfigs = {
+            lmstudio: {
+                endpoint: 'http://localhost:1234',
+                model: 'qwen/qwen3-4b-thinking-2507',
+                prompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+            },
+            ollama: {
+                endpoint: 'http://localhost:11434',
+                model: 'qwen2.5:7b',
+                prompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+            },
+            openai: {
+                endpoint: 'https://api.openai.com',
+                model: 'gpt-3.5-turbo',
+                apikey: '',
+                prompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+            }
+        };
+        
+        function setupLLMSettingsEventListeners() {
+            // 设置按钮
+            document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
+            
+            // 模态框关闭
+            document.getElementById('closeModal').addEventListener('click', closeSettingsModal);
+            document.getElementById('settingsModal').addEventListener('click', function(e) {
+                if (e.target === this) closeSettingsModal();
+            });
+            
+            // 选项卡切换
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    switchSettingsTab(this.dataset.tab);
+                });
+            });
+            
+            // 刷新模型按钮
+            document.querySelectorAll('.refresh-models-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    refreshModels(this.dataset.provider);
+                });
+            });
+            
+            // 测试连接按钮
+            document.querySelectorAll('.test-connection-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    testConnection(this.dataset.provider);
+                });
+            });
+            
+            // 保存设置
+            document.getElementById('saveSettings').addEventListener('click', saveSettings);
+            
+            // 重置设置
+            document.getElementById('resetSettings').addEventListener('click', resetSettings);
+            
+            // 加载保存的设置
+            loadSettings();
+        }
+        
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('show');
+            // 刷新当前设置到界面
+            refreshSettingsUI();
+        }
+        
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+        
+        function switchSettingsTab(tab) {
+            // 更新选项卡状态
+            document.querySelectorAll('.settings-tabs .tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            
+            // 切换内容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `tab-${tab}`);
+            });
+        }
+        
+        async function refreshModels(provider) {
+            const btn = document.querySelector(`[data-provider="${provider}"].refresh-models-btn`);
+            const select = document.getElementById(`${provider}-model`);
+            
+            btn.disabled = true;
+            btn.textContent = '⏳';
+            
+            try {
+                const config = getCurrentConfig(provider);
+                
+                const response = await fetch('/get-models', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        provider: provider,
+                        config: config
+                    })
+                });
+                
+                const result = await response.json();
+                
+                // 清空现有选项
+                select.innerHTML = '';
+                
+                if (result.success && result.models && result.models.length > 0) {
+                    result.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        select.appendChild(option);
+                    });
+                    
+                    // 如果有保存的模型，尝试选中
+                    if (llmConfigs[provider].model && result.models.includes(llmConfigs[provider].model)) {
+                        select.value = llmConfigs[provider].model;
+                    }
+                } else {
+                    const option = document.createElement('option');
+                    option.value = llmConfigs[provider].model;
+                    option.textContent = llmConfigs[provider].model;
+                    select.appendChild(option);
+                }
+            } catch (error) {
+                console.error('获取模型列表失败:', error);
+                // 保留默认选项
+                select.innerHTML = `<option value="${llmConfigs[provider].model}">${llmConfigs[provider].model}</option>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄';
+            }
+        }
+        
+        async function testConnection(provider) {
+            const btn = document.querySelector(`[data-provider="${provider}"].test-connection-btn`);
+            const status = document.getElementById(`${provider}-status`);
+            
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            status.className = 'status-indicator testing';
+            status.textContent = '测试中...';
+            
+            try {
+                const config = getCurrentConfig(provider);
+                
+                const response = await fetch('/test-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        provider: provider,
+                        config: config
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    status.className = 'status-indicator connected';
+                    status.textContent = '连接成功';
+                } else {
+                    status.className = 'status-indicator disconnected';
+                    status.textContent = result.message || '连接失败';
+                }
+            } catch (error) {
+                status.className = 'status-indicator disconnected';
+                status.textContent = '连接错误';
+                console.error(`测试 ${provider} 连接失败:`, error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '测试连接';
+            }
+        }
+        
+        function getCurrentConfig(provider) {
+            return {
+                endpoint: document.getElementById(`${provider}-endpoint`).value,
+                model: document.getElementById(`${provider}-model`).value,
+                apikey: provider === 'openai' ? document.getElementById(`${provider}-apikey`).value : undefined,
+                prompt: document.getElementById(`${provider}-prompt`).value
+            };
+        }
+        
+        function saveSettings() {
+            // 收集所有设置
+            ['lmstudio', 'ollama', 'openai'].forEach(provider => {
+                llmConfigs[provider] = getCurrentConfig(provider);
+            });
+            
+            // 保存到本地存储
+            localStorage.setItem('llmConfigs', JSON.stringify(llmConfigs));
+            
+            // 显示保存成功消息
+            showResult('success', '设置已保存');
+            
+            // 关闭模态框
+            closeSettingsModal();
+        }
+        
+        function resetSettings() {
+            if (confirm('确定要重置所有设置吗？这将清除所有自定义配置。')) {
+                // 重置为默认值
+                llmConfigs = {
+                    lmstudio: {
+                        endpoint: 'http://localhost:1234',
+                        model: 'qwen/qwen3-4b-thinking-2507',
+                        prompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+                    },
+                    ollama: {
+                        endpoint: 'http://localhost:11434',
+                        model: 'qwen2.5:7b',
+                        prompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+                    },
+                    openai: {
+                        endpoint: 'https://api.openai.com',
+                        model: 'gpt-3.5-turbo',
+                        apikey: '',
+                        prompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+                    }
+                };
+                
+                // 清除本地存储
+                localStorage.removeItem('llmConfigs');
+                
+                // 刷新界面
+                refreshSettingsUI();
+                
+                showResult('success', '设置已重置');
+            }
+        }
+        
+        function loadSettings() {
+            try {
+                const saved = localStorage.getItem('llmConfigs');
+                if (saved) {
+                    const savedConfigs = JSON.parse(saved);
+                    // 合并设置，保留默认值
+                    Object.keys(llmConfigs).forEach(provider => {
+                        if (savedConfigs[provider]) {
+                            llmConfigs[provider] = { ...llmConfigs[provider], ...savedConfigs[provider] };
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('加载设置失败:', error);
+            }
+            
+            refreshSettingsUI();
+        }
+        
+        function refreshSettingsUI() {
+            ['lmstudio', 'ollama', 'openai'].forEach(provider => {
+                const config = llmConfigs[provider];
+                document.getElementById(`${provider}-endpoint`).value = config.endpoint || '';
+                document.getElementById(`${provider}-model`).value = config.model || '';
+                document.getElementById(`${provider}-prompt`).value = config.prompt || '';
+                
+                if (provider === 'openai') {
+                    document.getElementById(`${provider}-apikey`).value = config.apikey || '';
+                }
+                
+                // 重置状态指示器
+                const status = document.getElementById(`${provider}-status`);
+                status.className = 'status-indicator disconnected';
+                status.textContent = '未连接';
+            });
+        }
+        
+        // 获取当前选中的提供商配置
+        function getCurrentProviderConfig() {
+            const selectedProvider = document.querySelector('input[name="provider"]:checked').value;
+            return {
+                provider: selectedProvider,
+                config: llmConfigs[selectedProvider]
+            };
+        }
+    </script>
+</body>
+</html>
