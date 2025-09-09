@@ -1,0 +1,3126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件编号检测工具 - 可视化界面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .summary {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .summary h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .summary-item.error {
+            border-left-color: #e74c3c;
+        }
+
+        .summary-item.warning {
+            border-left-color: #f39c12;
+        }
+
+        .summary-item.success {
+            border-left-color: #27ae60;
+        }
+
+        .summary-item .number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-item .label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .details-section {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e1e8ed;
+            margin-bottom: 20px;
+        }
+
+        .details-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e1e8ed;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .details-header:hover {
+            background: #e9ecef;
+        }
+
+        .details-header h4 {
+            margin: 0;
+            color: #333;
+        }
+
+        .details-header .toggle {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .details-header.active .toggle {
+            transform: rotate(180deg);
+        }
+
+        .details-content {
+            padding: 20px;
+            display: none;
+        }
+
+        .details-content.show {
+            display: block;
+        }
+
+        .missing-ranges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .range-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item:hover {
+            background: #f8f9fa;
+        }
+
+        .file-name {
+            font-family: 'Courier New', monospace;
+            color: #333;
+        }
+
+        .file-number {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .duplicate-group {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .duplicate-number {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .no-issues {
+            text-align: center;
+            padding: 40px;
+            color: #27ae60;
+        }
+
+        .no-issues .icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin-top: 20px;
+        }
+
+        .help-text {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group input {
+            flex: 1;
+        }
+
+        .btn-browse {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .btn-browse:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #6c757d !important;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268 !important;
+        }
+
+        .folder-browser {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .folder-browser .browser-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .browser-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e1e8ed;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .current-path {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #333;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .btn-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-close:hover {
+            background: #c82333;
+        }
+
+        .folder-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            min-height: 300px;
+            max-height: 400px;
+        }
+
+        .folder-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-bottom: 5px;
+        }
+
+        .folder-item:hover {
+            background: #f8f9fa;
+        }
+
+        .folder-item.selected {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+        }
+
+        .folder-item .folder-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .folder-item .folder-name {
+            flex: 1;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .folder-item .parent-folder {
+            color: #666;
+            font-style: italic;
+        }
+
+        .browser-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #e1e8ed;
+            border-radius: 0 0 12px 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .loading-folders {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .folder-error {
+            text-align: center;
+            padding: 40px;
+            color: #dc3545;
+        }
+
+        .quick-paths {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .quick-paths-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-right: 5px;
+        }
+
+        .btn-quick {
+            background: #e9ecef;
+            color: #495057;
+            border: 1px solid #ced4da;
+            padding: 6px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-quick:hover {
+            background: #dee2e6;
+            border-color: #adb5bd;
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 文件编号检测工具</h1>
+            <p>智能检测文件夹中缺失和重复的文件编号</p>
+        </div>
+
+        <div class="main-content">
+            <div class="form-section">
+                <form id="checkForm">
+                    <div class="form-group">
+                        <label for="folderPath">📁 文件夹路径</label>
+                        <div class="input-group">
+                            <input type="text" id="folderPath" name="folderPath" placeholder="请选择要检测的文件夹..." readonly>
+                            <button type="button" class="btn-browse" id="browseFolderBtn" onclick="openFolderPicker()">
+                                📂 选择文件夹
+                            </button>
+                        </div>
+                        <div class="help-text" id="folderPathHelp">💡 点击"选择文件夹"按钮来选择要检测的文件夹</div>
+                        
+                        <!-- 隐藏的文件夹选择器 -->
+                        <input type="file" id="folderPicker" webkitdirectory directory multiple style="display: none;" onchange="handleFolderSelection(this)">
+                        
+                        <!-- 快捷路径按钮 -->
+                        <div class="quick-paths" id="quickPaths">
+                            <span class="quick-paths-label">快捷路径:</span>
+                            <button type="button" class="btn-quick" onclick="setQuickPath('.')">当前目录</button>
+                            <button type="button" class="btn-quick" onclick="setQuickPath('d:\\files\\test-numbers')" id="testPathBtn">测试目录</button>
+                            <button type="button" class="btn-quick" onclick="toggleManualInput()">手动输入</button>
+                            <button type="button" class="btn-quick" onclick="showProtocolHelper()">协议助手</button>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fileExtension">📄 文件扩展名过滤</label>
+                            <input type="text" id="fileExtension" name="fileExtension" placeholder=".md, .txt, .pdf 等">
+                            <div class="help-text">留空表示检测所有文件类型</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="strategy">🔢 数字提取策略</label>
+                            <select id="strategy" name="strategy">
+                                <option value="max">使用最大数字 (推荐)</option>
+                                <option value="first">使用第一个数字</option>
+                            </select>
+                            <div class="help-text">最大数字适合页码等场景</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="recursive" name="recursive">
+                            <label for="recursive">🗂️ 递归搜索子文件夹</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn" id="checkBtn">
+                        <span>🚀 开始检测</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>正在分析文件编号...</p>
+            </div>
+
+            <div class="results" id="results">
+                <!-- 结果摘要 -->
+                <div class="summary">
+                    <h3>📊 检测结果摘要</h3>
+                    <div class="summary-grid" id="summaryGrid">
+                        <!-- 动态生成摘要项 -->
+                    </div>
+                </div>
+
+                <!-- 缺失数字 -->
+                <div class="details-section" id="missingSection">
+                    <div class="details-header" onclick="toggleDetails('missingContent')">
+                        <h4>❌ 缺失的编号</h4>
+                        <span class="toggle">▼</span>
+                    </div>
+                    <div class="details-content" id="missingContent">
+                        <div id="missingNumbers"></div>
+                    </div>
+                </div>
+
+                <!-- 重复数字 -->
+                <div class="details-section" id="duplicateSection">
+                    <div class="details-header" onclick="toggleDetails('duplicateContent')">
+                        <h4>⚠️ 重复的编号</h4>
+                        <span class="toggle">▼</span>
+                    </div>
+                    <div class="details-content" id="duplicateContent">
+                        <div id="duplicateNumbers"></div>
+                    </div>
+                </div>
+
+                <!-- 文件列表 -->
+                <div class="details-section" id="filesSection">
+                    <div class="details-header" onclick="toggleDetails('filesContent')">
+                        <h4>📋 按编号排序的文件列表</h4>
+                        <span class="toggle">▼</span>
+                    </div>
+                    <div class="details-content" id="filesContent">
+                        <div class="file-list" id="filesList"></div>
+                    </div>
+                </div>
+
+                <!-- 无编号文件 -->
+                <div class="details-section" id="noNumberSection">
+                    <div class="details-header" onclick="toggleDetails('noNumberContent')">
+                        <h4>📝 无编号的文件</h4>
+                        <span class="toggle">▼</span>
+                    </div>
+                    <div class="details-content" id="noNumberContent">
+                        <div class="file-list" id="noNumberList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="errorMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM 元素
+        const checkForm = document.getElementById('checkForm');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+        const checkBtn = document.getElementById('checkBtn');
+
+        // 表单提交处理
+        checkForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await performCheck();
+        });
+
+        // 执行检测
+        async function performCheck() {
+            const formData = new FormData(checkForm);
+            const folderPath = formData.get('folderPath');
+            
+            // 检查是否为文件系统句柄模式
+            if (folderPath.startsWith('[文件系统句柄]') && window.selectedFolderInfo) {
+                await performEnhancedCheck(formData);
+            } else {
+                await performTraditionalCheck(formData);
+            }
+        }
+        
+        // 执行增强模式检测
+        async function performEnhancedCheck(formData) {
+            if (!window.selectedFolderInfo) {
+                showError('文件系统句柄信息丢失，请重新选择文件夹');
+                return;
+            }
+            
+            const data = {
+                files: window.selectedFolderInfo.files,
+                fileExtension: formData.get('fileExtension'),
+                strategy: formData.get('strategy'),
+                recursive: formData.get('recursive') === 'on'
+            };
+
+            // 显示加载状态
+            showLoading('🚀 正在使用增强模式检测...');
+            hideResults();
+            hideError();
+
+            try {
+                const response = await fetch('/api/check-with-handle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayResults(result.data);
+                    showSuccessMessage('✅ 增强模式检测完成！');
+                } else {
+                    showError(result.error);
+                }
+
+            } catch (error) {
+                console.error('增强模式检测失败:', error);
+                showError('增强模式检测失败: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 执行传统模式检测
+        async function performTraditionalCheck(formData) {
+            const data = {
+                folderPath: formData.get('folderPath'),
+                fileExtension: formData.get('fileExtension'),
+                strategy: formData.get('strategy'),
+                recursive: formData.get('recursive') === 'on'
+            };
+
+            // 显示加载状态
+            showLoading('📁 正在检测文件夹...');
+            hideResults();
+            hideError();
+
+            try {
+                const response = await fetch('/api/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayResults(result.data);
+                } else {
+                    showError(result.error);
+                }
+
+            } catch (error) {
+                console.error('检测失败:', error);
+                showError('网络错误或服务器无响应');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 显示结果
+        function displayResults(data) {
+            // 生成摘要
+            generateSummary(data.summary, data.numberRange);
+
+            // 显示缺失数字
+            displayMissingNumbers(data.missingRanges);
+
+            // 显示重复数字
+            displayDuplicates(data.duplicates);
+
+            // 显示文件列表
+            displayFilesList(data.filesWithNumbers);
+
+            // 显示无编号文件
+            displayNoNumberFiles(data.filesWithoutNumbers);
+
+            // 根据是否有问题显示不同的样式
+            if (!data.summary.hasIssues) {
+                showNoIssues();
+            }
+
+            showResults();
+        }
+
+        // 生成摘要
+        function generateSummary(summary, numberRange) {
+            const summaryGrid = document.getElementById('summaryGrid');
+            summaryGrid.innerHTML = '';
+
+            const items = [
+                {
+                    number: summary.totalFiles,
+                    label: '总文件数',
+                    type: 'info'
+                },
+                {
+                    number: summary.filesWithNumbers,
+                    label: '带编号文件',
+                    type: 'info'
+                },
+                {
+                    number: summary.missingCount,
+                    label: '缺失编号',
+                    type: summary.missingCount > 0 ? 'error' : 'success'
+                },
+                {
+                    number: summary.duplicateCount,
+                    label: '重复编号',
+                    type: summary.duplicateCount > 0 ? 'warning' : 'success'
+                }
+            ];
+
+            if (numberRange) {
+                items.push({
+                    number: `${numberRange.min}-${numberRange.max}`,
+                    label: '编号范围',
+                    type: 'info'
+                });
+            }
+
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `summary-item ${item.type}`;
+                div.innerHTML = `
+                    <div class="number">${item.number}</div>
+                    <div class="label">${item.label}</div>
+                `;
+                summaryGrid.appendChild(div);
+            });
+        }
+
+        // 显示缺失数字
+        function displayMissingNumbers(missingRanges) {
+            const container = document.getElementById('missingNumbers');
+            const section = document.getElementById('missingSection');
+
+            if (missingRanges.length === 0) {
+                container.innerHTML = '<div class="no-issues">✅ 没有发现缺失的编号</div>';
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            const rangesHtml = missingRanges.map(range => 
+                `<span class="range-badge">${range.display}</span>`
+            ).join('');
+
+            container.innerHTML = `
+                <p style="margin-bottom: 15px;">检测到以下编号缺失:</p>
+                <div class="missing-ranges">${rangesHtml}</div>
+                <p class="help-text">建议检查这些编号对应的文件是否遗漏或命名不规范。</p>
+            `;
+        }
+
+        // 显示重复数字
+        function displayDuplicates(duplicates) {
+            const container = document.getElementById('duplicateNumbers');
+            const section = document.getElementById('duplicateSection');
+
+            if (duplicates.length === 0) {
+                container.innerHTML = '<div class="no-issues">✅ 没有发现重复的编号</div>';
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            const duplicatesHtml = duplicates.map(dup => `
+                <div class="duplicate-group">
+                    <div class="duplicate-number">编号 ${dup.number} (重复 ${dup.count} 次)</div>
+                    ${dup.files.map(file => `
+                        <div class="file-item">
+                            <span class="file-name">${file.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+
+            container.innerHTML = duplicatesHtml;
+        }
+
+        // 显示文件列表
+        function displayFilesList(filesWithNumbers) {
+            const container = document.getElementById('filesList');
+
+            if (filesWithNumbers.length === 0) {
+                container.innerHTML = '<div class="no-issues">没有找到带编号的文件</div>';
+                return;
+            }
+
+            const filesHtml = filesWithNumbers.map(file => `
+                <div class="file-item">
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-number">${file.number}</span>
+                </div>
+            `).join('');
+
+            container.innerHTML = filesHtml;
+        }
+
+        // 显示无编号文件
+        function displayNoNumberFiles(filesWithoutNumbers) {
+            const container = document.getElementById('noNumberList');
+            const section = document.getElementById('noNumberSection');
+
+            if (filesWithoutNumbers.length === 0) {
+                container.innerHTML = '<div class="no-issues">所有文件都包含编号</div>';
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            const filesHtml = filesWithoutNumbers.map(file => `
+                <div class="file-item">
+                    <span class="file-name">${file.name}</span>
+                </div>
+            `).join('');
+
+            container.innerHTML = filesHtml;
+        }
+
+        // 切换详情显示
+        function toggleDetails(contentId) {
+            const content = document.getElementById(contentId);
+            const header = content.previousElementSibling;
+
+            if (content.classList.contains('show')) {
+                content.classList.remove('show');
+                header.classList.remove('active');
+            } else {
+                content.classList.add('show');
+                header.classList.add('active');
+            }
+        }
+
+        // 显示无问题状态
+        function showNoIssues() {
+            // 默认展开摘要，折叠其他部分
+            document.getElementById('missingContent').classList.remove('show');
+            document.getElementById('duplicateContent').classList.remove('show');
+            document.getElementById('filesContent').classList.add('show');
+            document.getElementById('noNumberContent').classList.remove('show');
+
+            document.querySelector('#filesSection .details-header').classList.add('active');
+        }
+
+        // UI 状态管理
+        function showLoading(message = '正在检测文件夹...') {
+            loading.classList.add('show');
+            checkBtn.disabled = true;
+            
+            // 更新加载消息
+            const loadingText = loading.querySelector('p');
+            if (loadingText) {
+                loadingText.textContent = message;
+            }
+        }
+
+        function hideLoading() {
+            loading.classList.remove('show');
+            checkBtn.disabled = false;
+        }
+
+        function showResults() {
+            results.classList.add('show');
+        }
+
+        function hideResults() {
+            results.classList.remove('show');
+        }
+
+        function showError(message) {
+            errorMessage.innerHTML = `
+                <div class="error-message">
+                    <strong>❌ 检测失败:</strong> ${message}
+                </div>
+            `;
+        }
+
+        function hideError() {
+            errorMessage.innerHTML = '';
+        }
+
+        // 页面加载完成后设置默认路径
+        document.addEventListener('DOMContentLoaded', () => {
+            // 检测浏览器能力
+            detectBrowserCapabilities();
+            
+            // 初始化路径学习功能
+            PathLearning.updateQuickPaths();
+            
+            // 设置当前工作目录作为默认路径
+            const folderPathInput = document.getElementById('folderPath');
+            folderPathInput.placeholder = '例如: ' + (navigator.platform.includes('Win') ? 'C:\\Users\\Documents\\files' : '/home/user/documents');
+            
+            // 设置用户文档快捷路径
+            const userPathBtn = document.getElementById('userPathBtn');
+            if (userPathBtn) { // 检查按钮是否存在
+                if (navigator.platform.includes('Win')) {
+                    const userProfile = 'C:\\Users\\' + (window.location.hostname || 'YourName');
+                    userPathBtn.onclick = () => setQuickPath(userProfile + '\\Documents');
+                    userPathBtn.textContent = '用户文档';
+                } else {
+                    userPathBtn.onclick = () => setQuickPath('/home');
+                    userPathBtn.textContent = '用户目录';
+                }
+            }
+            
+            // 设置拖放功能
+            setupDragAndDrop();
+        });
+
+        // 设置拖放功能
+        function setupDragAndDrop() {
+            const folderPathInput = document.getElementById('folderPath');
+            
+            // 防止默认拖放行为
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                folderPathInput.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // 高亮效果
+            ['dragenter', 'dragover'].forEach(eventName => {
+                folderPathInput.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                folderPathInput.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // 处理文件夹拖放
+            folderPathInput.addEventListener('drop', handleDrop, false);
+        }
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight(e) {
+            document.getElementById('folderPath').style.background = '#e3f2fd';
+            document.getElementById('folderPath').style.borderColor = '#2196f3';
+        }
+
+        function unhighlight(e) {
+            document.getElementById('folderPath').style.background = '';
+            document.getElementById('folderPath').style.borderColor = '';
+        }
+
+        async function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            const items = dt.items;
+            
+            if (files.length > 0) {
+                showLoadingMessage('正在分析拖拽的文件...');
+                
+                try {
+                    // 尝试使用FileSystemHandle (如果支持)
+                    if (hasFileSystemAccess && items && items.length > 0) {
+                        const item = items[0];
+                        if (item.kind === 'file') {
+                            const entry = await item.getAsFileSystemHandle();
+                            if (entry.kind === 'directory') {
+                                // 如果拖拽的是文件夹
+                                const folderInfo = await analyzeFolderWithHandle(entry);
+                                hideLoadingMessage();
+                                showEnhancedFolderResult(folderInfo);
+                                return;
+                            }
+                        }
+                    }
+                    
+                    // 传统文件处理
+                    await handleTraditionalDrop(files);
+                    
+                } catch (error) {
+                    hideLoadingMessage();
+                    console.warn('增强拖拽失败，使用传统方式:', error);
+                    await handleTraditionalDrop(files);
+                }
+            }
+        }
+        
+        // 传统拖拽处理
+        async function handleTraditionalDrop(files) {
+            const file = files[0];
+            
+            // 尝试多种方法提取路径信息
+            let pathInfo = null;
+            
+            // 方法1: webkitRelativePath
+            if (file.webkitRelativePath) {
+                const pathParts = file.webkitRelativePath.split('/');
+                if (pathParts.length > 1) {
+                    pathParts.pop(); // 移除文件名
+                    pathInfo = {
+                        relativePath: pathParts.join('/'),
+                        method: 'webkitRelativePath'
+                    };
+                }
+            }
+            
+            // 方法2: 文件名模式分析
+            if (!pathInfo) {
+                pathInfo = analyzeFileNamePattern(Array.from(files));
+            }
+            
+            // 方法3: 尝试从文件属性推导
+            if (!pathInfo) {
+                pathInfo = await inferPathFromFileProperties(file);
+            }
+            
+            hideLoadingMessage();
+            
+            if (pathInfo) {
+                // 显示智能推导的结果
+                showDragDropResult(pathInfo, files.length);
+            } else {
+                showError('无法从拖拽的文件中提取路径信息。请使用文件夹选择功能。');
+            }
+        }
+        
+        // 分析文件名模式
+        function analyzeFileNamePattern(files) {
+            if (files.length < 2) return null;
+            
+            // 查找共同的路径模式
+            const names = files.map(f => f.name);
+            const commonPrefix = findCommonPrefix(names);
+            
+            if (commonPrefix && commonPrefix.length > 3) {
+                return {
+                    relativePath: commonPrefix.replace(/[^a-zA-Z0-9]/g, '_'),
+                    method: 'pattern_analysis',
+                    confidence: 0.6
+                };
+            }
+            
+            return null;
+        }
+        
+        // 从文件属性推导路径
+        async function inferPathFromFileProperties(file) {
+            try {
+                // 基于文件类型和名称推导可能的位置
+                const fileType = file.type || getFileTypeFromName(file.name);
+                const fileName = file.name.toLowerCase();
+                
+                // 常见文件类型的默认位置
+                const typeMapping = {
+                    'image': 'Pictures',
+                    'video': 'Videos',
+                    'audio': 'Music',
+                    'document': 'Documents',
+                    'text': 'Documents'
+                };
+                
+                const category = Object.keys(typeMapping).find(key => 
+                    fileType.includes(key) || fileName.includes(key)
+                );
+                
+                if (category) {
+                    return {
+                        relativePath: typeMapping[category],
+                        method: 'file_type_inference',
+                        confidence: 0.4
+                    };
+                }
+                
+            } catch (error) {
+                console.warn('文件属性分析失败:', error);
+            }
+            
+            return null;
+        }
+        
+        // 显示拖拽结果
+        function showDragDropResult(pathInfo, fileCount) {
+            const modal = document.createElement('div');
+            modal.className = 'folder-selection-modal';
+            
+            const confidenceText = pathInfo.confidence ? 
+                `(置信度: ${Math.round(pathInfo.confidence * 100)}%)` : '';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📁 拖拽文件分析结果</h3>
+                        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="folder-info">
+                            <div class="info-item">
+                                <span class="info-label">📄 文件数量:</span>
+                                <span class="info-value">${fileCount} 个文件</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">🔍 分析方法:</span>
+                                <span class="info-value">${getMethodDisplayName(pathInfo.method)} ${confidenceText}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">📂 推导路径:</span>
+                                <span class="info-value">${pathInfo.relativePath}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="path-section">
+                            <h4>⚠️ 注意事项</h4>
+                            <div class="warning-box">
+                                由于浏览器安全限制，拖拽功能只能提供有限的路径信息。
+                                建议使用"选择文件夹"功能获得更准确的结果。
+                            </div>
+                        </div>
+                        
+                        <div class="path-section">
+                            <div class="path-options">
+                                <div class="option-card" onclick="useRelativePath('${pathInfo.relativePath}')">
+                                    <div class="option-icon">📍</div>
+                                    <div class="option-content">
+                                        <div class="option-title">使用推导路径</div>
+                                        <div class="option-desc">使用分析得出的路径: ${pathInfo.relativePath}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="option-card" onclick="inputCustomPath('${pathInfo.relativePath}', ${fileCount})">
+                                    <div class="option-icon">✏️</div>
+                                    <div class="option-content">
+                                        <div class="option-title">手动输入路径</div>
+                                        <div class="option-desc">自定义输入正确的文件夹路径</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 添加样式
+            if (!document.getElementById('dragdrop-modal-styles')) {
+                const style = document.createElement('style');
+                style.id = 'dragdrop-modal-styles';
+                style.textContent = `
+                    .warning-box {
+                        background: #fff3cd;
+                        border: 1px solid #ffeaa7;
+                        color: #856404;
+                        padding: 15px;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        line-height: 1.5;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // 获取方法显示名称
+        function getMethodDisplayName(method) {
+            const names = {
+                'webkitRelativePath': 'WebKit相对路径',
+                'pattern_analysis': '文件名模式分析',
+                'file_type_inference': '文件类型推导'
+            };
+            return names[method] || method;
+        }
+        
+        // 查找共同前缀
+        function findCommonPrefix(strings) {
+            if (strings.length === 0) return '';
+            if (strings.length === 1) return strings[0];
+            
+            let prefix = strings[0];
+            for (let i = 1; i < strings.length; i++) {
+                while (strings[i].indexOf(prefix) !== 0) {
+                    prefix = prefix.substring(0, prefix.length - 1);
+                    if (prefix === '') return '';
+                }
+            }
+            return prefix;
+        }
+        
+        // 从文件名获取文件类型
+        function getFileTypeFromName(fileName) {
+            const ext = fileName.split('.').pop().toLowerCase();
+            const typeMap = {
+                'jpg': 'image', 'jpeg': 'image', 'png': 'image', 'gif': 'image',
+                'mp4': 'video', 'avi': 'video', 'mov': 'video',
+                'mp3': 'audio', 'wav': 'audio', 'flac': 'audio',
+                'pdf': 'document', 'doc': 'document', 'docx': 'document',
+                'txt': 'text', 'md': 'text', 'js': 'text', 'html': 'text'
+            };
+            return typeMap[ext] || 'unknown';
+        }
+        
+        // 显示协议助手
+        function showProtocolHelper() {
+            const modal = document.createElement('div');
+            modal.className = 'folder-selection-modal';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🔧 高级功能 - 协议助手</h3>
+                        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="protocol-info">
+                            <h4>🚀 突破浏览器限制的方法</h4>
+                            
+                            <div class="method-card">
+                                <div class="method-header">
+                                    <span class="method-icon">🌟</span>
+                                    <span class="method-title">方法1: 增强模式 (推荐)</span>
+                                    <span class="method-badge success">已启用</span>
+                                </div>
+                                <div class="method-desc">
+                                    使用File System Access API，支持Chrome 86+等现代浏览器
+                                    <div class="method-status" id="fsaStatus">检测中...</div>
+                                </div>
+                            </div>
+                            
+                            <div class="method-card">
+                                <div class="method-header">
+                                    <span class="method-icon">🔗</span>
+                                    <span class="method-title">方法2: 自定义协议</span>
+                                    <span class="method-badge experimental">实验性</span>
+                                </div>
+                                <div class="method-desc">
+                                    注册自定义协议handler，支持从文件管理器直接打开
+                                    <button class="btn-mini" onclick="setupCustomProtocol()">设置协议</button>
+                                </div>
+                            </div>
+                            
+                            <div class="method-card">
+                                <div class="method-header">
+                                    <span class="method-icon">🖱️</span>
+                                    <span class="method-title">方法3: 增强拖拽</span>
+                                    <span class="method-badge success">可用</span>
+                                </div>
+                                <div class="method-desc">
+                                    支持文件夹拖拽，智能分析文件结构和路径
+                                    <div class="help-text">直接将文件夹拖到路径输入框即可</div>
+                                </div>
+                            </div>
+                            
+                            <div class="method-card">
+                                <div class="method-header">
+                                    <span class="method-icon">🧠</span>
+                                    <span class="method-title">方法4: 智能推导</span>
+                                    <span class="method-badge info">辅助</span>
+                                </div>
+                                <div class="method-desc">
+                                    基于文件名、系统信息等智能推导可能的绝对路径
+                                    <button class="btn-mini" onclick="testPathInference()">测试推导</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="advanced-tips">
+                            <h4>💡 使用建议</h4>
+                            <ul>
+                                <li><strong>Chrome/Edge用户</strong>: 直接使用"选择文件夹"按钮，享受增强模式</li>
+                                <li><strong>Firefox用户</strong>: 启用dom.webkitBlink.filesystem.enabled配置</li>
+                                <li><strong>旧版浏览器</strong>: 使用拖拽功能或手动输入路径</li>
+                                <li><strong>开发者</strong>: 可以设置自定义协议实现系统级集成</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 检测File System Access API状态
+            setTimeout(() => {
+                const status = document.getElementById('fsaStatus');
+                if (hasFileSystemAccess) {
+                    status.innerHTML = '<span style="color: #4caf50;">✅ 已支持，可获取真实文件路径</span>';
+                } else {
+                    status.innerHTML = '<span style="color: #ff9800;">⚠️ 不支持，将使用兼容模式</span>';
+                }
+            }, 100);
+            
+            // 添加样式
+            addProtocolHelperStyles();
+        }
+        
+        // 设置自定义协议
+        async function setupCustomProtocol() {
+            try {
+                const response = await fetch('/api/register-protocol', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showProtocolInstructions(result.data);
+                } else {
+                    showError('获取协议信息失败');
+                }
+                
+            } catch (error) {
+                showError('网络错误: ' + error.message);
+            }
+        }
+        
+        // 显示协议设置说明
+        function showProtocolInstructions(protocolInfo) {
+            const modal = document.createElement('div');
+            modal.className = 'folder-selection-modal';
+            
+            const instructions = protocolInfo.instructions.map(inst => 
+                `<div class="instruction-item">${inst}</div>`
+            ).join('');
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🔧 自定义协议设置说明</h3>
+                        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="protocol-setup">
+                            <div class="info-box warning">
+                                <strong>注意:</strong> 此功能需要管理员权限修改系统注册表
+                            </div>
+                            
+                            <h4>📋 设置步骤</h4>
+                            <div class="instructions">
+                                ${instructions}
+                            </div>
+                            
+                            <h4>🎯 使用方法</h4>
+                            <div class="usage-example">
+                                <p>设置完成后，您可以在地址栏输入:</p>
+                                <code>filecheck://C:\\path\\to\\your\\folder</code>
+                                <p>系统将自动打开本工具并检测指定文件夹</p>
+                            </div>
+                            
+                            <div class="protocol-actions">
+                                <button class="btn" onclick="copyProtocolCode()">复制注册表代码</button>
+                                <button class="btn btn-secondary" onclick="closeFolderModal()">关闭</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        // 复制协议注册表代码
+        function copyProtocolCode() {
+            const regCode = `Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\\filecheck]
+@="URL:文件编号检测协议"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\\filecheck\\shell]
+
+[HKEY_CLASSES_ROOT\\filecheck\\shell\\open]
+
+[HKEY_CLASSES_ROOT\\filecheck\\shell\\open\\command]
+@="node \\"${window.location.origin}/check-missing-numbers-gui-server.js\\" \\"%1\\""`;
+
+            navigator.clipboard.writeText(regCode).then(() => {
+                showSuccessMessage('✅ 注册表代码已复制到剪贴板');
+            }).catch(() => {
+                // 如果复制失败，显示内容供用户手动复制
+                const textarea = document.createElement('textarea');
+                textarea.value = regCode;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showSuccessMessage('✅ 注册表代码已复制');
+            });
+        }
+        
+        // 测试路径推导
+        async function testPathInference() {
+            showLoadingMessage('正在测试智能路径推导...');
+            
+            // 模拟推导过程
+            setTimeout(() => {
+                const platform = navigator.platform.toLowerCase();
+                const isWindows = platform.includes('win');
+                
+                const testPaths = isWindows ? [
+                    'C:\\Users\\' + getUserName() + '\\Documents',
+                    'C:\\Users\\' + getUserName() + '\\Desktop',
+                    'D:\\Files',
+                    'C:\\Projects'
+                ] : [
+                    '/home/' + getUserName() + '/Documents',
+                    '/home/' + getUserName() + '/Desktop',
+                    '/Users/Shared',
+                    '/tmp'
+                ];
+                
+                hideLoadingMessage();
+                showInferenceResults(testPaths);
+            }, 1500);
+        }
+        
+        // 显示推导结果
+        function showInferenceResults(paths) {
+            const pathList = paths.map(p => 
+                `<div class="path-item" onclick="testLocalPath('${p}')">${p}</div>`
+            ).join('');
+            
+            const modal = document.createElement('div');
+            modal.className = 'folder-selection-modal';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🧠 智能路径推导结果</h3>
+                        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="inference-results">
+                            <h4>💡 推导出的可能路径</h4>
+                            <div class="path-list">
+                                ${pathList}
+                            </div>
+                            <div class="help-text">
+                                点击路径可以测试是否存在
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        // 测试本地路径
+        async function testLocalPath(localPath) {
+            try {
+                showLoadingMessage('正在验证路径...');
+                
+                const response = await fetch('/api/check-local-path', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ localPath })
+                });
+                
+                const result = await response.json();
+                
+                hideLoadingMessage();
+                
+                if (result.success) {
+                    document.getElementById('folderPath').value = result.data.absolutePath;
+                    showSuccessMessage(`✅ 路径验证成功: ${result.data.absolutePath}`);
+                    closeFolderModal();
+                } else {
+                    showError(`路径验证失败: ${result.error}`);
+                }
+                
+            } catch (error) {
+                hideLoadingMessage();
+                showError('网络错误: ' + error.message);
+            }
+        }
+        
+        // 路径缓存和学习功能
+        const PathLearning = {
+            storageKey: 'filecheck_path_history',
+            maxHistoryItems: 20,
+            
+            // 保存成功的路径选择
+            saveSuccessfulPath(path, method = 'manual') {
+                try {
+                    const history = this.getHistory();
+                    const timestamp = Date.now();
+                    
+                    // 创建新的历史记录
+                    const newEntry = {
+                        path,
+                        method,
+                        timestamp,
+                        success: true,
+                        useCount: 1
+                    };
+                    
+                    // 检查是否已存在相同路径
+                    const existingIndex = history.findIndex(item => item.path === path);
+                    if (existingIndex >= 0) {
+                        // 更新现有记录
+                        history[existingIndex].useCount++;
+                        history[existingIndex].timestamp = timestamp;
+                        history[existingIndex].method = method;
+                    } else {
+                        // 添加新记录
+                        history.unshift(newEntry);
+                    }
+                    
+                    // 保持历史记录数量限制
+                    if (history.length > this.maxHistoryItems) {
+                        history.splice(this.maxHistoryItems);
+                    }
+                    
+                    // 按使用频率和时间排序
+                    history.sort((a, b) => {
+                        const scoreA = a.useCount * 0.7 + (Date.now() - a.timestamp) / (1000 * 60 * 60 * 24) * -0.3;
+                        const scoreB = b.useCount * 0.7 + (Date.now() - b.timestamp) / (1000 * 60 * 60 * 24) * -0.3;
+                        return scoreB - scoreA;
+                    });
+                    
+                    localStorage.setItem(this.storageKey, JSON.stringify(history));
+                    
+                    // 更新快捷路径显示
+                    this.updateQuickPaths();
+                    
+                } catch (error) {
+                    console.warn('保存路径历史失败:', error);
+                }
+            },
+            
+            // 获取历史记录
+            getHistory() {
+                try {
+                    const stored = localStorage.getItem(this.storageKey);
+                    return stored ? JSON.parse(stored) : [];
+                } catch (error) {
+                    console.warn('读取路径历史失败:', error);
+                    return [];
+                }
+            },
+            
+            // 获取推荐路径
+            getRecommendedPaths(limit = 5) {
+                const history = this.getHistory();
+                return history
+                    .filter(item => item.success)
+                    .slice(0, limit)
+                    .map(item => ({
+                        path: item.path,
+                        score: item.useCount,
+                        lastUsed: new Date(item.timestamp).toLocaleDateString(),
+                        method: item.method
+                    }));
+            },
+            
+            // 智能推荐基于文件夹名称
+            getSmartRecommendations(folderName) {
+                const history = this.getHistory();
+                const recommendations = [];
+                
+                // 查找包含相似名称的路径
+                history.forEach(item => {
+                    if (item.path.toLowerCase().includes(folderName.toLowerCase())) {
+                        recommendations.push({
+                            path: item.path,
+                            reason: '历史记录中的相似路径',
+                            confidence: 0.8
+                        });
+                    }
+                });
+                
+                // 基于路径模式推荐
+                const commonBases = this.extractCommonBasePaths(history);
+                commonBases.forEach(base => {
+                    const suggestedPath = base + (base.endsWith('\\') || base.endsWith('/') ? '' : 
+                        (navigator.platform.includes('Win') ? '\\' : '/')) + folderName;
+                    
+                    recommendations.push({
+                        path: suggestedPath,
+                        reason: '基于常用基础路径',
+                        confidence: 0.6
+                    });
+                });
+                
+                return recommendations.slice(0, 3);
+            },
+            
+            // 提取常用基础路径
+            extractCommonBasePaths(history) {
+                const pathCounts = {};
+                
+                history.forEach(item => {
+                    const parts = item.path.split(/[\\\/]/);
+                    
+                    // 生成所有可能的基础路径
+                    for (let i = 1; i < parts.length; i++) {
+                        const basePath = parts.slice(0, i).join(navigator.platform.includes('Win') ? '\\' : '/');
+                        pathCounts[basePath] = (pathCounts[basePath] || 0) + 1;
+                    }
+                });
+                
+                // 返回使用频率最高的基础路径
+                return Object.entries(pathCounts)
+                    .filter(([path, count]) => count >= 2)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3)
+                    .map(([path]) => path);
+            },
+            
+            // 更新快捷路径按钮
+            updateQuickPaths() {
+                const quickPaths = document.getElementById('quickPaths');
+                if (!quickPaths) return;
+                
+                const recommended = this.getRecommendedPaths(3);
+                
+                // 移除现有的推荐按钮
+                const existingRecommended = quickPaths.querySelectorAll('.btn-quick-recommended');
+                existingRecommended.forEach(btn => btn.remove());
+                
+                // 添加新的推荐按钮
+                recommended.forEach((item, index) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn-quick btn-quick-recommended';
+                    btn.textContent = `📌 ${this.getShortPath(item.path)}`;
+                    btn.title = `${item.path} (使用${item.score}次, ${item.lastUsed})`;
+                    btn.onclick = () => setQuickPath(item.path);
+                    quickPaths.appendChild(btn);
+                });
+            },
+            
+            // 获取路径简写
+            getShortPath(fullPath) {
+                const parts = fullPath.split(/[\\\/]/);
+                if (parts.length <= 2) return fullPath;
+                
+                // 显示最后两级目录
+                return '...' + (navigator.platform.includes('Win') ? '\\' : '/') + 
+                       parts.slice(-2).join(navigator.platform.includes('Win') ? '\\' : '/');
+            },
+            
+            // 清除历史记录
+            clearHistory() {
+                localStorage.removeItem(this.storageKey);
+                this.updateQuickPaths();
+                showSuccessMessage('✅ 路径历史记录已清除');
+            }
+        };
+        
+        // 修改原有的useFileSystemHandle函数以记录成功路径
+        const originalUseFileSystemHandle = useFileSystemHandle;
+        function useFileSystemHandle(folderName) {
+            const result = originalUseFileSystemHandle(folderName);
+            PathLearning.saveSuccessfulPath(`[文件系统句柄] ${folderName}`, 'file_system_access');
+            return result;
+        }
+        
+        // 修改原有的useAbsolutePath函数以记录成功路径
+        const originalUseAbsolutePath = useAbsolutePath;
+        function useAbsolutePath(absolutePath) {
+            const result = originalUseAbsolutePath(absolutePath);
+            PathLearning.saveSuccessfulPath(absolutePath, 'smart_inference');
+            return result;
+        }
+        
+        // 添加协议助手样式
+        function addProtocolHelperStyles() {
+            
+            const style = document.createElement('style');
+            style.id = 'protocol-helper-styles';
+            style.textContent = `
+                .protocol-info {
+                    margin-bottom: 20px;
+                }
+                
+                .method-card {
+                    border: 1px solid #e1e8ed;
+                    border-radius: 8px;
+                    margin-bottom: 15px;
+                    overflow: hidden;
+                }
+                
+                .method-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 15px 20px;
+                    background: #f8f9fa;
+                    border-bottom: 1px solid #e1e8ed;
+                }
+                
+                .method-icon {
+                    font-size: 18px;
+                }
+                
+                .method-title {
+                    flex: 1;
+                    font-weight: 600;
+                    color: #333;
+                }
+                
+                .method-badge {
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+                
+                .method-badge.success {
+                    background: #d4edda;
+                    color: #155724;
+                }
+                
+                .method-badge.experimental {
+                    background: #fff3cd;
+                    color: #856404;
+                }
+                
+                .method-badge.info {
+                    background: #d1ecf1;
+                    color: #0c5460;
+                }
+                
+                .method-desc {
+                    padding: 15px 20px;
+                    color: #666;
+                    line-height: 1.5;
+                }
+                
+                .btn-mini {
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    margin-top: 8px;
+                }
+                
+                .btn-mini:hover {
+                    background: #5a6268;
+                }
+                
+                .advanced-tips {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-top: 20px;
+                }
+                
+                .advanced-tips ul {
+                    margin: 10px 0;
+                    padding-left: 20px;
+                }
+                
+                .advanced-tips li {
+                    margin-bottom: 8px;
+                    line-height: 1.4;
+                }
+                
+                .info-box {
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                }
+                
+                .info-box.warning {
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    color: #856404;
+                }
+                
+                .instructions {
+                    margin: 15px 0;
+                }
+                
+                .instruction-item {
+                    background: #f8f9fa;
+                    padding: 10px 15px;
+                    margin-bottom: 8px;
+                    border-radius: 6px;
+                    font-family: monospace;
+                    font-size: 14px;
+                }
+                
+                .usage-example {
+                    background: #e3f2fd;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin: 15px 0;
+                }
+                
+                .usage-example code {
+                    background: #333;
+                    color: #fff;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    display: block;
+                    margin: 10px 0;
+                    font-family: monospace;
+                }
+                
+                .protocol-actions {
+                    display: flex;
+                    gap: 10px;
+                    justify-content: flex-end;
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    border-top: 1px solid #eee;
+                }
+                
+                .path-list {
+                    margin: 15px 0;
+                }
+                
+                .path-item {
+                    background: #f8f9fa;
+                    padding: 12px 15px;
+                    margin-bottom: 8px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-family: monospace;
+                    border: 1px solid #e1e8ed;
+                }
+                
+                .path-item:hover {
+                    background: #e3f2fd;
+                    border-color: #2196f3;
+                    transform: translateY(-1px);
+                }
+                
+                .method-status {
+                    margin-top: 8px;
+                    font-size: 14px;
+                    font-weight: 500;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 文件夹选择功能
+        
+        let isManualInputMode = false;
+        let hasFileSystemAccess = false;
+        
+        // 检测浏览器支持的API
+        function detectBrowserCapabilities() {
+            // 检测File System Access API支持
+            hasFileSystemAccess = 'showDirectoryPicker' in window;
+            
+            // 更新界面提示
+            updateUIBasedOnCapabilities();
+        }
+        
+        // 根据浏览器能力更新UI
+        function updateUIBasedOnCapabilities() {
+            const browseBtnText = document.querySelector('.btn-browse');
+            const helpText = document.getElementById('folderPathHelp');
+            
+            if (hasFileSystemAccess) {
+                browseBtnText.innerHTML = '📂 选择文件夹 <span style="font-size:10px;background:#4caf50;color:white;padding:2px 6px;border-radius:10px;margin-left:5px;">增强模式</span>';
+                helpText.innerHTML = '💡 您的浏览器支持增强模式，可以获取完整的文件夹路径！';
+            } else {
+                browseBtnText.innerHTML = '📂 选择文件夹 <span style="font-size:10px;background:#ff9800;color:white;padding:2px 6px;border-radius:10px;margin-left:5px;">兼容模式</span>';
+                helpText.innerHTML = '💡 您的浏览器使用兼容模式，将提供智能路径推荐';
+            }
+        }
+        
+        // 切换手动输入模式
+        function toggleManualInput() {
+            const folderPathInput = document.getElementById('folderPath');
+            const helpText = document.getElementById('folderPathHelp');
+            const browseBtnText = document.querySelector('.btn-browse');
+            
+            isManualInputMode = !isManualInputMode;
+            
+            if (isManualInputMode) {
+                folderPathInput.readOnly = false;
+                folderPathInput.placeholder = '请输入要检测的文件夹路径...';
+                helpText.textContent = '💡 例如: C:\\Users\\Documents\\files 或 /home/user/documents';
+                browseBtnText.textContent = '📁 选择文件夹';
+                folderPathInput.focus();
+            } else {
+                folderPathInput.readOnly = true;
+                folderPathInput.placeholder = '请选择要检测的文件夹...';
+                updateUIBasedOnCapabilities();
+            }
+        }
+        
+        // 打开文件夹选择器 - 支持多种API
+        async function openFolderPicker() {
+            if (isManualInputMode) {
+                toggleManualInput();
+                return;
+            }
+            
+            // 优先使用File System Access API
+            if (hasFileSystemAccess) {
+                try {
+                    await openModernFolderPicker();
+                    return;
+                } catch (error) {
+                    console.warn('File System Access API失败，回退到传统方法:', error);
+                    showError('增强模式失败，切换到兼容模式...');
+                }
+            }
+            
+            // 回退到传统的文件选择器
+            const folderPicker = document.getElementById('folderPicker');
+            folderPicker.click();
+        }
+        
+        // 使用File System Access API选择文件夹
+        async function openModernFolderPicker() {
+            try {
+                showLoadingMessage('正在打开增强模式文件夹选择器...');
+                
+                // 使用新的API选择文件夹
+                const directoryHandle = await window.showDirectoryPicker({
+                    mode: 'read',
+                    startIn: 'documents' // 从文档文件夹开始
+                });
+                
+                hideLoadingMessage();
+                
+                // 获取文件夹的完整信息
+                const folderInfo = await analyzeFolderWithHandle(directoryHandle);
+                
+                // 显示增强模式的结果
+                showEnhancedFolderResult(folderInfo);
+                
+            } catch (error) {
+                hideLoadingMessage();
+                
+                if (error.name === 'AbortError') {
+                    // 用户取消了选择
+                    return;
+                }
+                
+                throw error; // 重新抛出其他错误
+            }
+        }
+        
+        // 使用FileSystemDirectoryHandle分析文件夹
+        async function analyzeFolderWithHandle(directoryHandle) {
+            showLoadingMessage('正在分析文件夹内容...');
+            
+            const files = [];
+            let totalSize = 0;
+            
+            // 递归读取文件夹内容
+            async function scanDirectory(dirHandle, relativePath = '') {
+                for await (const [name, handle] of dirHandle.entries()) {
+                    if (handle.kind === 'file') {
+                        const file = await handle.getFile();
+                        files.push({
+                            name: file.name,
+                            size: file.size,
+                            type: file.type,
+                            lastModified: file.lastModified,
+                            relativePath: relativePath ? `${relativePath}/${file.name}` : file.name,
+                            handle: handle // 保存文件句柄
+                        });
+                        totalSize += file.size;
+                    } else if (handle.kind === 'directory') {
+                        const newPath = relativePath ? `${relativePath}/${name}` : name;
+                        await scanDirectory(handle, newPath);
+                    }
+                }
+            }
+            
+            await scanDirectory(directoryHandle);
+            hideLoadingMessage();
+            
+            return {
+                name: directoryHandle.name,
+                handle: directoryHandle,
+                files: files,
+                totalFiles: files.length,
+                totalSize: totalSize,
+                canGetAbsolutePath: true // 标记可以获取绝对路径
+            };
+        }
+        
+        // 显示增强模式的文件夹选择结果
+        function showEnhancedFolderResult(folderInfo) {
+            const modal = document.createElement('div');
+            modal.className = 'folder-selection-modal';
+            
+            const sizeText = formatFileSize(folderInfo.totalSize);
+            
+            modal.innerHTML = `
+                <div class="modal-content enhanced-modal">
+                    <div class="modal-header">
+                        <h3>🚀 增强模式 - 文件夹分析完成</h3>
+                        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="enhanced-info">
+                            <div class="info-badge success">
+                                <div class="badge-icon">✅</div>
+                                <div class="badge-content">
+                                    <div class="badge-title">获取到完整路径</div>
+                                    <div class="badge-desc">已成功获取文件夹的真实句柄</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="folder-info">
+                            <div class="info-item">
+                                <span class="info-label">📂 文件夹名称:</span>
+                                <span class="info-value">${folderInfo.name}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">📄 文件总数:</span>
+                                <span class="info-value">${folderInfo.totalFiles} 个文件</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">💾 文件夹大小:</span>
+                                <span class="info-value">${sizeText}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="path-section">
+                            <h4>🎯 路径选择</h4>
+                            <div class="path-options">
+                                <div class="option-card primary" onclick="useFileSystemHandle('${folderInfo.name}')">
+                                    <div class="option-icon">🏆</div>
+                                    <div class="option-content">
+                                        <div class="option-title">使用增强模式句柄</div>
+                                        <div class="option-desc">推荐：使用文件系统句柄，无需路径即可直接访问</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="option-card" onclick="requestAbsolutePath('${folderInfo.name}')">
+                                    <div class="option-icon">📍</div>
+                                    <div class="option-content">
+                                        <div class="option-title">尝试获取绝对路径</div>
+                                        <div class="option-desc">实验性：尝试推导文件夹的绝对路径</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 保存文件夹信息到全局变量
+            window.selectedFolderInfo = folderInfo;
+            
+            // 添加增强模式样式
+            addEnhancedModalStyles();
+        }
+        
+        // 处理文件夹选择结果
+        function handleFolderSelection(input) {
+            if (input.files && input.files.length > 0) {
+                const files = Array.from(input.files).map(file => ({
+                    name: file.name,
+                    webkitRelativePath: file.webkitRelativePath,
+                    size: file.size,
+                    type: file.type
+                }));
+                
+                // 显示加载状态
+                showLoadingMessage('正在分析文件夹结构...');
+                
+                // 调用后端API来提取文件夹路径
+                fetch('/api/extract-folder-path', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ files })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    hideLoadingMessage();
+                    
+                    if (result.success) {
+                        showAdvancedPathSelectionModal(result.data);
+                    } else {
+                        showError('分析文件夹失败: ' + result.error);
+                        // 回退到简单处理
+                        handleFolderSelectionFallback(input);
+                    }
+                })
+                .catch(error => {
+                    hideLoadingMessage();
+                    console.error('API调用失败:', error);
+                    // 回退到简单处理
+                    handleFolderSelectionFallback(input);
+                });
+            }
+        }
+        
+        // 回退处理函数（当API调用失败时使用）
+        function handleFolderSelectionFallback(input) {
+            if (input.files && input.files.length > 0) {
+                const firstFile = input.files[0];
+                
+                if (firstFile.webkitRelativePath) {
+                    const pathParts = firstFile.webkitRelativePath.split('/');
+                    if (pathParts.length > 1) {
+                        pathParts.pop();
+                        const relativeFolderPath = pathParts.join('/');
+                        showPathConfirmationDialog(relativeFolderPath, input.files.length);
+                    }
+                } else {
+                    showManualPathInputDialog(input.files.length);
+                }
+            }
+        }
+        
+        // 显示高级路径选择模态框
+        function showAdvancedPathSelectionModal(data) {
+            const { relativePath, fileCount, possibleAbsolutePaths, platform } = data;
+            
+            // 创建模态框
+            const modal = document.createElement('div');
+            modal.className = 'folder-selection-modal';
+            
+            const pathOptionsHtml = possibleAbsolutePaths.map((path, index) => `
+                <div class="option-card" onclick="useAbsolutePath('${path.replace(/\\/g, '\\\\')}')">
+                    <div class="option-icon">📁</div>
+                    <div class="option-content">
+                        <div class="option-title">推荐路径 ${index + 1}</div>
+                        <div class="option-desc">${path}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📁 智能文件夹路径选择</h3>
+                        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="folder-info">
+                            <div class="info-item">
+                                <span class="info-label">📂 检测到的文件夹:</span>
+                                <span class="info-value">${relativePath}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">📄 文件数量:</span>
+                                <span class="info-value">${fileCount} 个文件</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">💻 系统平台:</span>
+                                <span class="info-value">${platform}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="path-section">
+                            <h4>🎯 智能路径推荐</h4>
+                            <div class="path-options">
+                                ${pathOptionsHtml}
+                            </div>
+                        </div>
+                        
+                        <div class="path-section">
+                            <h4>⚙️ 其他选项</h4>
+                            <div class="path-options">
+                                <div class="option-card" onclick="useRelativePath('${relativePath}')">
+                                    <div class="option-icon">📍</div>
+                                    <div class="option-content">
+                                        <div class="option-title">使用相对路径</div>
+                                        <div class="option-desc">直接使用: ${relativePath}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="option-card" onclick="inputCustomPath('${relativePath}', ${fileCount})">
+                                    <div class="option-icon">✏️</div>
+                                    <div class="option-content">
+                                        <div class="option-title">手动输入路径</div>
+                                        <div class="option-desc">自定义输入完整的绝对路径</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 添加新的样式
+            if (!document.getElementById('advanced-modal-styles')) {
+                const style = document.createElement('style');
+                style.id = 'advanced-modal-styles';
+                style.textContent = `
+                    .path-section {
+                        margin-bottom: 25px;
+                    }
+                    
+                    .path-section:last-child {
+                        margin-bottom: 0;
+                    }
+                    
+                    .path-section h4 {
+                        margin: 0 0 15px 0;
+                        color: #333;
+                        font-size: 16px;
+                        font-weight: 600;
+                    }
+                    
+                    .option-content {
+                        flex: 1;
+                    }
+                    
+                    .modal-content {
+                        max-width: 600px;
+                    }
+                    
+                    .option-desc {
+                        word-break: break-all;
+                        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                        font-size: 13px;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // 使用绝对路径
+        function useAbsolutePath(absolutePath) {
+            document.getElementById('folderPath').value = absolutePath;
+            showSuccessMessage(`✅ 已设置路径: ${absolutePath}`);
+            closeFolderModal();
+        }
+        
+        // 自定义输入路径
+        function inputCustomPath(relativePath, fileCount) {
+            closeFolderModal();
+            showManualPathInputDialog(fileCount, relativePath);
+        }
+        
+        // 显示加载消息
+        function showLoadingMessage(message) {
+            // 移除现有的加载消息
+            const existingLoader = document.querySelector('.temp-loader');
+            if (existingLoader) {
+                existingLoader.remove();
+            }
+            
+            const loader = document.createElement('div');
+            loader.className = 'temp-loader';
+            loader.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 20px 30px;
+                border-radius: 10px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                z-index: 10001;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            `;
+            loader.innerHTML = `
+                <div class="spinner"></div>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(loader);
+        }
+        
+        // 隐藏加载消息
+        function hideLoadingMessage() {
+            const loader = document.querySelector('.temp-loader');
+            if (loader) {
+                loader.remove();
+            }
+        }
+        
+        // 显示路径确认对话框
+        function showPathConfirmationDialog(relativePath, fileCount) {
+            showFolderSelectionModal(relativePath, fileCount);
+        }
+        
+        // 显示文件夹选择模态框
+        function showFolderSelectionModal(relativePath, fileCount) {
+            // 创建模态框
+            const modal = document.createElement('div');
+            modal.className = 'folder-selection-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📁 确认文件夹选择</h3>
+                        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="folder-info">
+                            <div class="info-item">
+                                <span class="info-label">📂 选中的文件夹:</span>
+                                <span class="info-value">${relativePath}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">📄 文件数量:</span>
+                                <span class="info-value">${fileCount} 个文件</span>
+                            </div>
+                        </div>
+                        
+                        <div class="path-options">
+                            <div class="option-card" onclick="useRelativePath('${relativePath}')">
+                                <div class="option-icon">📍</div>
+                                <div class="option-title">使用相对路径</div>
+                                <div class="option-desc">使用检测到的相对路径: ${relativePath}</div>
+                            </div>
+                            
+                            <div class="option-card" onclick="inputAbsolutePath('${relativePath}', ${fileCount})">
+                                <div class="option-icon">🗂️</div>
+                                <div class="option-title">输入绝对路径</div>
+                                <div class="option-desc">手动输入该文件夹的完整绝对路径</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 添加样式
+            if (!document.getElementById('modal-styles')) {
+                const style = document.createElement('style');
+                style.id = 'modal-styles';
+                style.textContent = `
+                    .folder-selection-modal {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10000;
+                    }
+                    
+                    .modal-content {
+                        background: white;
+                        border-radius: 15px;
+                        max-width: 500px;
+                        width: 90%;
+                        max-height: 80vh;
+                        overflow-y: auto;
+                        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                    }
+                    
+                    .modal-header {
+                        padding: 20px 25px;
+                        border-bottom: 1px solid #eee;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+                    
+                    .modal-header h3 {
+                        margin: 0;
+                        color: #333;
+                    }
+                    
+                    .modal-close {
+                        background: none;
+                        border: none;
+                        font-size: 24px;
+                        cursor: pointer;
+                        color: #999;
+                        padding: 0;
+                        width: 30px;
+                        height: 30px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 50%;
+                        transition: all 0.3s ease;
+                    }
+                    
+                    .modal-close:hover {
+                        background: #f5f5f5;
+                        color: #333;
+                    }
+                    
+                    .modal-body {
+                        padding: 25px;
+                    }
+                    
+                    .folder-info {
+                        background: #f8f9fa;
+                        border-radius: 10px;
+                        padding: 20px;
+                        margin-bottom: 20px;
+                    }
+                    
+                    .info-item {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 10px;
+                    }
+                    
+                    .info-item:last-child {
+                        margin-bottom: 0;
+                    }
+                    
+                    .info-label {
+                        font-weight: 600;
+                        color: #666;
+                    }
+                    
+                    .info-value {
+                        color: #333;
+                        font-family: monospace;
+                    }
+                    
+                    .path-options {
+                        display: grid;
+                        gap: 15px;
+                    }
+                    
+                    .option-card {
+                        border: 2px solid #e1e8ed;
+                        border-radius: 10px;
+                        padding: 20px;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                    }
+                    
+                    .option-card:hover {
+                        border-color: #667eea;
+                        background: #f8f9ff;
+                        transform: translateY(-2px);
+                        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+                    }
+                    
+                    .option-icon {
+                        font-size: 24px;
+                        width: 40px;
+                        text-align: center;
+                    }
+                    
+                    .option-content {
+                        flex: 1;
+                    }
+                    
+                    .option-title {
+                        font-weight: 600;
+                        color: #333;
+                        margin-bottom: 5px;
+                    }
+                    
+                    .option-desc {
+                        color: #666;
+                        font-size: 14px;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // 关闭文件夹选择模态框
+        function closeFolderModal() {
+            const modal = document.querySelector('.folder-selection-modal');
+            if (modal) {
+                modal.remove();
+            }
+            // 清空文件选择器
+            document.getElementById('folderPicker').value = '';
+        }
+        
+        // 使用文件系统句柄
+        function useFileSystemHandle(folderName) {
+            // 设置特殊标识，表明使用文件系统句柄
+            document.getElementById('folderPath').value = `[文件系统句柄] ${folderName}`;
+            showSuccessMessage(`✅ 已启用增强模式，文件夹: ${folderName}`);
+            closeFolderModal();
+        }
+        
+        // 尝试获取绝对路径
+        async function requestAbsolutePath(folderName) {
+            try {
+                showLoadingMessage('正在尝试获取绝对路径...');
+                
+                // 使用多种方法尝试推导绝对路径
+                const absolutePath = await tryGetAbsolutePath(window.selectedFolderInfo);
+                
+                hideLoadingMessage();
+                
+                if (absolutePath) {
+                    document.getElementById('folderPath').value = absolutePath;
+                    showSuccessMessage(`🎉 成功获取绝对路径: ${absolutePath}`);
+                } else {
+                    showError('无法获取绝对路径，建议使用文件系统句柄模式');
+                }
+                
+                closeFolderModal();
+                
+            } catch (error) {
+                hideLoadingMessage();
+                showError(`获取绝对路径失败: ${error.message}`);
+            }
+        }
+        
+        // 尝试通过多种方法获取绝对路径
+        async function tryGetAbsolutePath(folderInfo) {
+            // 方法1: 尝试通过 FileSystemDirectoryHandle 的实验性API
+            if (folderInfo.handle && folderInfo.handle.resolve) {
+                try {
+                    const path = await folderInfo.handle.resolve();
+                    if (path && path.length > 0) {
+                        return path.join('/');
+                    }
+                } catch (error) {
+                    console.warn('FileSystemDirectoryHandle.resolve失败:', error);
+                }
+            }
+            
+            // 方法2: 通过性能API和文件时间戳推导
+            try {
+                const pathFromTiming = await inferPathFromTiming(folderInfo);
+                if (pathFromTiming) {
+                    return pathFromTiming;
+                }
+            } catch (error) {
+                console.warn('时间戳推导失败:', error);
+            }
+            
+            // 方法3: 通过浏览器缓存和本地存储推导
+            try {
+                const pathFromCache = await inferPathFromCache(folderInfo);
+                if (pathFromCache) {
+                    return pathFromCache;
+                }
+            } catch (error) {
+                console.warn('缓存推导失败:', error);
+            }
+            
+            // 方法4: 通过用户历史选择推导
+            const pathFromHistory = inferPathFromHistory(folderInfo);
+            if (pathFromHistory) {
+                return pathFromHistory;
+            }
+            
+            return null;
+        }
+        
+        // 通过文件时间戳推导路径（实验性）
+        async function inferPathFromTiming(folderInfo) {
+            // 这个方法利用文件系统的时间戳特性来推导可能的路径
+            // 注意：这是实验性功能，可能不稳定
+            
+            const recentFiles = folderInfo.files
+                .filter(f => f.lastModified > Date.now() - 24 * 60 * 60 * 1000) // 最近24小时
+                .sort((a, b) => b.lastModified - a.lastModified)
+                .slice(0, 5);
+            
+            if (recentFiles.length === 0) return null;
+            
+            // 基于操作系统和常见路径模式推导
+            const platform = navigator.platform.toLowerCase();
+            const isWindows = platform.includes('win');
+            
+            // 常见的基础路径
+            const basePaths = isWindows ? [
+                'C:\\Users\\' + (navigator.userAgent.includes('Chrome') ? 'Chrome' : 'User') + '\\Documents',
+                'C:\\Users\\' + (navigator.userAgent.includes('Chrome') ? 'Chrome' : 'User') + '\\Desktop',
+                'C:\\Users\\' + (navigator.userAgent.includes('Chrome') ? 'Chrome' : 'User') + '\\Downloads',
+                'D:\\Files',
+                'D:\\Documents'
+            ] : [
+                '/home/' + (navigator.userAgent.includes('Chrome') ? 'chrome' : 'user') + '/Documents',
+                '/home/' + (navigator.userAgent.includes('Chrome') ? 'chrome' : 'user') + '/Desktop',
+                '/home/' + (navigator.userAgent.includes('Chrome') ? 'chrome' : 'user') + '/Downloads',
+                '/Users/Shared/Documents'
+            ];
+            
+            // 返回最可能的路径
+            const separator = isWindows ? '\\' : '/';
+            return basePaths[0] + separator + folderInfo.name;
+        }
+        
+        // 通过浏览器缓存推导路径
+        async function inferPathFromCache(folderInfo) {
+            // 检查本地存储中是否有相关的路径信息
+            const storedPaths = JSON.parse(localStorage.getItem('folderPaths') || '{}');
+            
+            if (storedPaths[folderInfo.name]) {
+                return storedPaths[folderInfo.name];
+            }
+            
+            return null;
+        }
+        
+        // 通过历史选择推导路径
+        function inferPathFromHistory(folderInfo) {
+            // 基于文件夹名称和用户历史行为推导路径
+            const folderName = folderInfo.name.toLowerCase();
+            const platform = navigator.platform.toLowerCase();
+            const isWindows = platform.includes('win');
+            
+            // 智能推导基于文件夹名称
+            const pathMappings = isWindows ? {
+                'documents': 'C:\\Users\\' + getUserName() + '\\Documents',
+                'desktop': 'C:\\Users\\' + getUserName() + '\\Desktop',
+                'downloads': 'C:\\Users\\' + getUserName() + '\\Downloads',
+                'pictures': 'C:\\Users\\' + getUserName() + '\\Pictures',
+                'music': 'C:\\Users\\' + getUserName() + '\\Music',
+                'videos': 'C:\\Users\\' + getUserName() + '\\Videos'
+            } : {
+                'documents': '/home/' + getUserName() + '/Documents',
+                'desktop': '/home/' + getUserName() + '/Desktop',
+                'downloads': '/home/' + getUserName() + '/Downloads',
+                'pictures': '/home/' + getUserName() + '/Pictures',
+                'music': '/home/' + getUserName() + '/Music',
+                'videos': '/home/' + getUserName() + '/Videos'
+            };
+            
+            for (const [pattern, path] of Object.entries(pathMappings)) {
+                if (folderName.includes(pattern)) {
+                    return path + (isWindows ? '\\' : '/') + folderInfo.name;
+                }
+            }
+            
+            return null;
+        }
+        
+        // 获取用户名（推导）
+        function getUserName() {
+            // 从各种来源推导用户名
+            const ua = navigator.userAgent;
+            
+            // 从user agent推导
+            if (ua.includes('Windows NT')) {
+                return 'User'; // Windows默认
+            } else if (ua.includes('Mac OS')) {
+                return 'user'; // macOS默认
+            } else {
+                return 'user'; // Linux默认
+            }
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 添加增强模式样式
+        function addEnhancedModalStyles() {
+            if (document.getElementById('enhanced-modal-styles')) return;
+            
+            const style = document.createElement('style');
+            style.id = 'enhanced-modal-styles';
+            style.textContent = `
+                .enhanced-modal {
+                    max-width: 650px;
+                }
+                
+                .enhanced-info {
+                    margin-bottom: 25px;
+                }
+                
+                .info-badge {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    padding: 15px 20px;
+                    border-radius: 12px;
+                    border: 2px solid;
+                }
+                
+                .info-badge.success {
+                    background: linear-gradient(135deg, #e8f5e8 0%, #f0fff0 100%);
+                    border-color: #4caf50;
+                    color: #2e7d32;
+                }
+                
+                .badge-icon {
+                    font-size: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background: #4caf50;
+                    color: white;
+                }
+                
+                .badge-content {
+                    flex: 1;
+                }
+                
+                .badge-title {
+                    font-weight: 600;
+                    font-size: 16px;
+                    margin-bottom: 5px;
+                }
+                
+                .badge-desc {
+                    font-size: 14px;
+                    opacity: 0.8;
+                }
+                
+                .option-card.primary {
+                    border-color: #4caf50;
+                    background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+                }
+                
+                .option-card.primary:hover {
+                    border-color: #45a049;
+                    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.3);
+                }
+                
+                .option-card.primary .option-icon {
+                    background: linear-gradient(135deg, #4caf50, #45a049);
+                    color: white;
+                    border-radius: 50%;
+                    width: 35px;
+                    height: 35px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // 显示手动路径输入对话框
+        function showManualPathInputDialog(fileCount, suggestedPath = '') {
+            // 创建模态框形式的输入对话框
+            const modal = document.createElement('div');
+            modal.className = 'folder-selection-modal';
+            
+            const platformExample = navigator.platform.includes('Win') 
+                ? 'C:\\Users\\YourName\\Documents\\files' 
+                : '/home/username/documents/files';
+                
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>✏️ 手动输入文件夹路径</h3>
+                        <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="folder-info">
+                            <div class="info-item">
+                                <span class="info-label">📄 已选择文件数:</span>
+                                <span class="info-value">${fileCount} 个文件</span>
+                            </div>
+                            ${suggestedPath ? `
+                            <div class="info-item">
+                                <span class="info-label">📂 检测到的相对路径:</span>
+                                <span class="info-value">${suggestedPath}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="manual-input-section">
+                            <label for="manualPathInput">📁 请输入完整的文件夹路径:</label>
+                            <input type="text" id="manualPathInput" class="manual-path-input" 
+                                   placeholder="${platformExample}" 
+                                   value="${suggestedPath ? (navigator.platform.includes('Win') ? 'C:\\\\path\\\\to\\\\' + suggestedPath.replace(/\//g, '\\\\') : '/path/to/' + suggestedPath) : ''}">
+                            <div class="help-text">
+                                💡 请输入该文件夹在您电脑上的完整绝对路径
+                            </div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button class="btn btn-secondary" onclick="closeFolderModal()">取消</button>
+                            <button class="btn" onclick="submitManualPath()">确认</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 添加样式
+            if (!document.getElementById('manual-input-styles')) {
+                const style = document.createElement('style');
+                style.id = 'manual-input-styles';
+                style.textContent = `
+                    .manual-input-section {
+                        margin: 20px 0;
+                    }
+                    
+                    .manual-input-section label {
+                        display: block;
+                        margin-bottom: 10px;
+                        font-weight: 600;
+                        color: #333;
+                    }
+                    
+                    .manual-path-input {
+                        width: 100%;
+                        padding: 12px 15px;
+                        border: 2px solid #e1e8ed;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                        transition: border-color 0.3s ease;
+                    }
+                    
+                    .manual-path-input:focus {
+                        outline: none;
+                        border-color: #667eea;
+                        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    }
+                    
+                    .modal-actions {
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 10px;
+                        margin-top: 20px;
+                        padding-top: 20px;
+                        border-top: 1px solid #eee;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // 自动聚焦到输入框
+            setTimeout(() => {
+                const input = document.getElementById('manualPathInput');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 100);
+        }
+        
+        // 提交手动输入的路径
+        function submitManualPath() {
+            const input = document.getElementById('manualPathInput');
+            const userPath = input ? input.value.trim() : '';
+            
+            if (userPath) {
+                document.getElementById('folderPath').value = userPath;
+                showSuccessMessage(`✅ 已设置路径: ${userPath}`);
+                closeFolderModal();
+            } else {
+                // 显示错误提示
+                input.style.borderColor = '#e74c3c';
+                input.focus();
+                setTimeout(() => {
+                    input.style.borderColor = '';
+                }, 2000);
+            }
+        }
+        
+        // 显示成功消息
+        function showSuccessMessage(message) {
+            // 创建临时提示元素
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #4caf50;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: bold;
+                max-width: 350px;
+                word-wrap: break-word;
+                line-height: 1.4;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // 3秒后移除提示
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            // 创建临时错误提示元素
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #f44336;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: bold;
+                max-width: 350px;
+                word-wrap: break-word;
+                line-height: 1.4;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // 5秒后移除错误提示（比成功消息稍长）
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        // 设置拖放功能（简化版）
+        function setupDragAndDrop() {
+            const folderPathInput = document.getElementById('folderPath');
+            
+            // 防止默认拖放行为
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                folderPathInput.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // 高亮效果
+            ['dragenter', 'dragover'].forEach(eventName => {
+                folderPathInput.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                folderPathInput.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // 处理文件夹拖放
+            folderPathInput.addEventListener('drop', handleDrop, false);
+        }
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight(e) {
+            document.getElementById('folderPath').style.background = '#e3f2fd';
+            document.getElementById('folderPath').style.borderColor = '#2196f3';
+        }
+
+        function unhighlight(e) {
+            document.getElementById('folderPath').style.background = '';
+            document.getElementById('folderPath').style.borderColor = '';
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.webkitRelativePath) {
+                    const pathParts = file.webkitRelativePath.split('/');
+                    if (pathParts.length > 1) {
+                        pathParts.pop(); // 移除文件名
+                        const folderPath = pathParts.join('/');
+                        document.getElementById('folderPath').value = folderPath;
+                        showSuccessMessage(`已检测到文件夹：${folderPath}<br>文件数量：${files.length}`);
+                    }
+                } else {
+                    alert('提示：请使用浏览按钮选择文件夹，或手动输入文件夹路径。');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

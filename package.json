@@ -15,6 +15,9 @@
     "latex-fix": "node katex-gui-server.js",
     "start:latex-fix": "node katex-gui-server.js",
     "formula-fix": "node katex-gui-server.js",
+    "check-numbers": "node check-missing-numbers.js",
+    "check-numbers-gui": "node check-missing-numbers-gui-server.js",
+    "start:check-numbers-gui": "node check-missing-numbers-gui-server.js",
     "build": "echo 'No build step required for this project'",
     "test": "echo 'No tests specified'"
   },
@@ -22,7 +25,9 @@
     "md2pdf": "./md2pdf.js",
     "md2pdf-gui": "./gui-server.js",
     "merge-gui": "./merge-gui-server.js",
-    "latex-fix": "./katex-gui-server.js"
+    "latex-fix": "./katex-gui-server.js",
+    "check-numbers": "./check-missing-numbers.js",
+    "check-numbers-gui": "./check-missing-numbers-gui-server.js"
   },
   "exports": {
     ".": "./src/index.js",
