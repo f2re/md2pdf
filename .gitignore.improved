@@ -1,0 +1,104 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+.nyc_output
+.coverage/
+
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+.svelte-kit/
+.vitepress/dist
+.vuepress/dist
+
+# Temporary directories for the md2pdf project
+output/
+uploads/
+temp/
+tmp/
+cache/
+
+# Merge GUI specific directories
+merge-uploads/
+merge-output/
+merge-temp/
+
+# Generated PDF files
+*.pdf
+
+# Generated HTML files (if any)
+*.html
+!index.html
+!README.md
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Cache directories
+.cache
+.parcel-cache
+.temp
+.node_repl_history
+.stylelintcache
+.eslintcache
+.npm
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Database local files
+.dynamodb/
+.firebase/
+
+# IDE files
+.vscode-test
+.tern-port
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Vite logs files
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Lock files
+*.lock
+
+# Editor temporary files
+*~
+*.tmp
