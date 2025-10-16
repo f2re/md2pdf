@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * 检测文件夹中按文件名数字排序时缺失的编号
- * 用法: node check-missing-numbers.js <文件夹路径> [选项]
+ * Detects missing numbers in a folder when sorted by filename numbers.
+ * Usage: node check-missing-numbers.js <folderPath> [options]
  */
 
 import * as fs from 'fs/promises';
@@ -10,9 +10,9 @@ import * as path from 'path';
 import chalk from 'chalk';
 
 /**
- * 从文件名中提取数字
- * @param {string} filename - 文件名
- * @returns {Array} 数字数组
+ * Extracts numbers from a filename.
+ * @param {string} filename - The filename.
+ * @returns {Array} An array of numbers.
  */
 function extractNumbers(filename) {
   const numbers = filename.match(/\d+/g);
@@ -20,38 +20,38 @@ function extractNumbers(filename) {
 }
 
 /**
- * 从文件名中提取主要数字（通常是第一个或最大的数字）
- * @param {string} filename - 文件名
- * @returns {number|null} 主要数字
+ * Extracts the main number from a filename (usually the first or the largest).
+ * @param {string} filename - The filename.
+ * @returns {number|null} The main number.
  */
 function extractMainNumber(filename) {
   const numbers = extractNumbers(filename);
   if (numbers.length === 0) return null;
   
-  // 策略1: 使用第一个数字
+  // Strategy 1: Use the first number
   // return numbers[0];
   
-  // 策略2: 使用最大的数字（适合页码等场景）
+  // Strategy 2: Use the largest number (suitable for page numbers, etc.)
   return Math.max(...numbers);
 }
 
 /**
- * 检测文件夹中的文件
- * @param {string} folderPath - 文件夹路径
- * @param {Object} options - 选项
- * @returns {Object} 检测结果
+ * Checks for missing file numbers in a folder.
+ * @param {string} folderPath - The path to the folder.
+ * @param {Object} options - The options.
+ * @returns {Object} The check result.
  */
 async function checkMissingNumbers(folderPath, options = {}) {
   const {
-    fileExtension = '',  // 文件扩展名过滤，如 '.md', '.txt'
-    recursive = false,   // 是否递归搜索
-    strategy = 'max'     // 数字提取策略: 'first' | 'max'
+    fileExtension = '',  // File extension filter, e.g., '.md', '.txt'
+    recursive = false,   // Whether to search recursively
+    strategy = 'max'     // Number extraction strategy: 'first' | 'max'
   } = options;
 
   try {
     const files = [];
     
-    // 获取文件列表
+    // Get the list of files
     async function scanDirectory(dirPath, currentDepth = 0) {
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
       
@@ -61,7 +61,7 @@ async function checkMissingNumbers(folderPath, options = {}) {
         if (entry.isDirectory() && recursive) {
           await scanDirectory(fullPath, currentDepth + 1);
         } else if (entry.isFile()) {
-          // 文件扩展名过滤
+          // Filter by file extension
           if (fileExtension && !entry.name.toLowerCase().endsWith(fileExtension.toLowerCase())) {
             continue;
           }
@@ -78,7 +78,7 @@ async function checkMissingNumbers(folderPath, options = {}) {
     
     await scanDirectory(folderPath);
     
-    // 提取带数字的文件
+    // Extract files with numbers
     const filesWithNumbers = [];
     const filesWithoutNumbers = [];
     
@@ -97,10 +97,10 @@ async function checkMissingNumbers(folderPath, options = {}) {
       }
     });
     
-    // 按数字排序
+    // Sort by number
     filesWithNumbers.sort((a, b) => a.number - b.number);
     
-    // 检测缺失的数字
+    // Detect missing numbers
     const numbers = filesWithNumbers.map(f => f.number);
     const missingNumbers = [];
     
@@ -115,7 +115,7 @@ async function checkMissingNumbers(folderPath, options = {}) {
       }
     }
     
-    // 检测重复数字
+    // Detect duplicate numbers
     const duplicates = [];
     const numberCounts = {};
     
@@ -144,39 +144,39 @@ async function checkMissingNumbers(folderPath, options = {}) {
     };
     
   } catch (error) {
-    throw new Error(`无法扫描文件夹 ${folderPath}: ${error.message}`);
+    throw new Error(`Unable to scan folder ${folderPath}: ${error.message}`);
   }
 }
 
 /**
- * 生成详细报告
- * @param {Object} result - 检测结果
- * @param {Object} options - 选项
+ * Generates a detailed report.
+ * @param {Object} result - The check result.
+ * @param {Object} options - The options.
  */
 function generateReport(result, options = {}) {
   const { folderPath, showDetails = false } = options;
   
-  console.log(chalk.cyan('\n📋 文件编号检测报告'));
+  console.log(chalk.cyan('\n📋 File Number Check Report'));
   console.log(chalk.cyan('=================='));
   
   if (folderPath) {
-    console.log(chalk.blue(`📁 扫描路径: ${folderPath}`));
+    console.log(chalk.blue(`📁 Scan Path: ${folderPath}`));
   }
   
-  console.log(chalk.blue(`📄 总文件数: ${result.totalFiles}`));
-  console.log(chalk.green(`🔢 带数字文件: ${result.filesWithNumbers.length}`));
-  console.log(chalk.gray(`📝 无数字文件: ${result.filesWithoutNumbers.length}`));
+  console.log(chalk.blue(`📄 Total Files: ${result.totalFiles}`));
+  console.log(chalk.green(`🔢 Files with Numbers: ${result.filesWithNumbers.length}`));
+  console.log(chalk.gray(`📝 Files without Numbers: ${result.filesWithoutNumbers.length}`));
   
   if (result.numberRange) {
-    console.log(chalk.blue(`📊 数字范围: ${result.numberRange.min} - ${result.numberRange.max}`));
+    console.log(chalk.blue(`📊 Number Range: ${result.numberRange.min} - ${result.numberRange.max}`));
   }
   
-  // 缺失数字
+  // Missing numbers
   if (result.missingNumbers.length > 0) {
-    console.log(chalk.red(`\n❌ 缺失的数字 (${result.missingNumbers.length}个):`));
+    console.log(chalk.red(`\n❌ Missing Numbers (${result.missingNumbers.length}):`));
     console.log(chalk.red('================='));
     
-    // 按连续范围分组显示
+    // Group and display as continuous ranges
     const ranges = [];
     let start = result.missingNumbers[0];
     let end = start;
@@ -192,27 +192,27 @@ function generateReport(result, options = {}) {
     }
     ranges.push(start === end ? `${start}` : `${start}-${end}`);
     
-    console.log(chalk.yellow(`缺失编号: ${ranges.join(', ')}`));
+    console.log(chalk.yellow(`Missing numbers: ${ranges.join(', ')}`));
   } else if (result.filesWithNumbers.length > 0) {
-    console.log(chalk.green('\n✅ 没有缺失的数字'));
+    console.log(chalk.green('\n✅ No missing numbers'));
   }
   
-  // 重复数字
+  // Duplicate numbers
   if (result.duplicates.length > 0) {
-    console.log(chalk.red(`\n⚠️ 重复的数字 (${result.duplicates.length}个):`));
+    console.log(chalk.red(`\n⚠️ Duplicate Numbers (${result.duplicates.length}):`));
     console.log(chalk.red('================'));
     
     result.duplicates.forEach(dup => {
-      console.log(chalk.yellow(`数字 ${dup.number} (出现 ${dup.count} 次):`));
+      console.log(chalk.yellow(`Number ${dup.number} (appeared ${dup.count} times):`));
       dup.files.forEach(file => {
         console.log(chalk.gray(`  - ${file.name}`));
       });
     });
   }
   
-  // 无数字文件
+  // Files without numbers
   if (result.filesWithoutNumbers.length > 0 && showDetails) {
-    console.log(chalk.gray(`\n📝 无数字的文件 (${result.filesWithoutNumbers.length}个):`));
+    console.log(chalk.gray(`\n📝 Files without Numbers (${result.filesWithoutNumbers.length}):`));
     console.log(chalk.gray('==============='));
     
     result.filesWithoutNumbers.forEach(file => {
@@ -220,9 +220,9 @@ function generateReport(result, options = {}) {
     });
   }
   
-  // 详细文件列表
+  // Detailed file list
   if (showDetails && result.filesWithNumbers.length > 0) {
-    console.log(chalk.blue(`\n📋 按数字排序的文件列表:`));
+    console.log(chalk.blue(`\n📋 File List Sorted by Number:`));
     console.log(chalk.blue('===================='));
     
     result.filesWithNumbers.forEach(file => {
@@ -232,7 +232,7 @@ function generateReport(result, options = {}) {
 }
 
 /**
- * 解析命令行参数
+ * Parses command-line arguments.
  */
 function parseArguments() {
   const args = process.argv.slice(2);
@@ -272,37 +272,37 @@ function parseArguments() {
 }
 
 /**
- * 显示帮助信息
+ * Displays help information.
  */
 function showHelp() {
-  console.log(chalk.cyan('文件编号缺失检测脚本'));
+  console.log(chalk.cyan('File Number Missing Check Script'));
   console.log(chalk.cyan('=================='));
-  console.log(chalk.blue('\n用法:'));
-  console.log(chalk.white('  node check-missing-numbers.js <文件夹路径> [选项]'));
+  console.log(chalk.blue('\nUsage:'));
+  console.log(chalk.white('  node check-missing-numbers.js <folderPath> [options]'));
   
-  console.log(chalk.blue('\n选项:'));
-  console.log(chalk.white('  --ext=<扩展名>     只检查指定扩展名的文件 (如: --ext=.md)'));
-  console.log(chalk.white('  --recursive, -r    递归搜索子目录'));
-  console.log(chalk.white('  --details, -d      显示详细信息'));
-  console.log(chalk.white('  --strategy=first   使用文件名中第一个数字'));
-  console.log(chalk.white('  --strategy=max     使用文件名中最大的数字 (默认)'));
-  console.log(chalk.white('  --help, -h         显示帮助信息'));
+  console.log(chalk.blue('\nOptions:'));
+  console.log(chalk.white('  --ext=<extension>     Only check files with the specified extension (e.g., --ext=.md)'));
+  console.log(chalk.white('  --recursive, -r    Recursively search subdirectories'));
+  console.log(chalk.white('  --details, -d      Show detailed information'));
+  console.log(chalk.white('  --strategy=first   Use the first number in the filename'));
+  console.log(chalk.white('  --strategy=max     Use the largest number in the filename (default)'));
+  console.log(chalk.white('  --help, -h         Show help information'));
   
-  console.log(chalk.blue('\n示例:'));
+  console.log(chalk.blue('\nExamples:'));
   console.log(chalk.white('  node check-missing-numbers.js ./docs'));
   console.log(chalk.white('  node check-missing-numbers.js ./pages --ext=.md'));
   console.log(chalk.white('  node check-missing-numbers.js ./files -r -d'));
   console.log(chalk.white('  node check-missing-numbers.js ./chapters --strategy=first'));
   
-  console.log(chalk.blue('\n说明:'));
-  console.log(chalk.white('  - 脚本会从文件名中提取数字并检测缺失的编号'));
-  console.log(chalk.white('  - 默认使用文件名中最大的数字作为文件编号'));
-  console.log(chalk.white('  - 支持连续范围显示 (如: 5-8, 12, 15-17)'));
-  console.log(chalk.white('  - 可以检测重复编号和无编号文件'));
+  console.log(chalk.blue('\nDescription:'));
+  console.log(chalk.white('  - The script extracts numbers from filenames and detects missing numbers.'));
+  console.log(chalk.white('  - By default, it uses the largest number in the filename as the file number.'));
+  console.log(chalk.white('  - Supports displaying continuous ranges (e.g., 5-8, 12, 15-17).'));
+  console.log(chalk.white('  - Can detect duplicate numbers and files without numbers.'));
 }
 
 /**
- * 主函数
+ * Main function.
  */
 async function main() {
   const config = parseArguments();
@@ -313,13 +313,13 @@ async function main() {
   }
   
   if (!config.folderPath) {
-    console.error(chalk.red('❌ 请提供文件夹路径'));
+    console.error(chalk.red('❌ Please provide a folder path'));
     showHelp();
     process.exit(1);
   }
   
   try {
-    console.log(chalk.cyan('🔍 开始检测文件编号...'));
+    console.log(chalk.cyan('🔍 Starting file number check...'));
     
     const result = await checkMissingNumbers(config.folderPath, {
       fileExtension: config.fileExtension,
@@ -332,18 +332,18 @@ async function main() {
       showDetails: config.showDetails
     });
     
-    // 根据结果设置退出码
+    // Set exit code based on the result
     const hasIssues = result.missingNumbers.length > 0 || result.duplicates.length > 0;
     process.exit(hasIssues ? 1 : 0);
     
   } catch (error) {
-    console.error(chalk.red('❌ 检测失败:'), error.message);
+    console.error(chalk.red('❌ Check failed:'), error.message);
     process.exit(1);
   }
 }
 
-// 运行主函数
+// Run the main function
 main().catch(error => {
-  console.error(chalk.red('❌ 未捕获的错误:'), error);
+  console.error(chalk.red('❌ Uncaught error:'), error);
   process.exit(1);
 });

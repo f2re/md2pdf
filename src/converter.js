@@ -1,5 +1,5 @@
 /**
- * PDF转换器模块
+ * PDF Converter Module
  */
 
 import puppeteer from 'puppeteer';
@@ -9,25 +9,25 @@ import { getOutputPath } from './utils.js';
 import { BROWSER_CONFIG, PDF_CONFIG, PAGE_CONFIG } from './config.js';
 
 /**
- * Markdown 到 PDF 转换器类
+ * Markdown to PDF Converter Class
  */
 export class MarkdownToPdfConverter {
   constructor(options = {}) {
     this.renderer = new MarkdownLatexRenderer();
     this.browser = null;
-    this.reuseInstance = options.reuseInstance !== false; // 默认启用实例复用
-    this.maxPages = options.maxPages || Infinity; // 移除页面数限制
-    this.openPages = new Set(); // 跟踪打开的页面
-    this.progressCallback = options.progressCallback || null; // 进度回调
+    this.reuseInstance = options.reuseInstance !== false; // Enable instance reuse by default
+    this.maxPages = options.maxPages || Infinity; // Remove page count limit
+    this.openPages = new Set(); // Track open pages
+    this.progressCallback = options.progressCallback || null; // Progress callback
   }
 
   /**
-   * 设置进度回调函数
-   * @param {Function} callback - 进度回调函数，接收 (phase, data) 参数
+   * Sets the progress callback function
+   * @param {Function} callback - The progress callback function, receives (phase, data) arguments
    */
   setProgressCallback(callback) {
     this.progressCallback = callback;
-    // 同时设置渲染器的进度回调
+    // Also set the renderer's progress callback
     this.renderer.setProgressCallback((renderedCount, totalCount) => {
       if (this.progressCallback) {
         this.progressCallback('formula_rendering', {
@@ -41,49 +41,49 @@ export class MarkdownToPdfConverter {
   }
 
   /**
-   * 转换 Markdown 文件
-   * @param {Object} options - 转换选项
-   * @param {string} options.input - 输入文件路径
-   * @param {string} [options.output] - 输出文件路径
-   * @param {string} [options.format='pdf'] - 输出格式 (pdf|html)
-   * @param {Object} [options.pdfOptions] - PDF选项
-   * @param {Object} [options.styleOptions] - 样式选项
-   * @returns {Promise<string>} 输出文件路径
+   * Converts a Markdown file
+   * @param {Object} options - The conversion options
+   * @param {string} options.input - The input file path
+   * @param {string} [options.output] - The output file path
+   * @param {string} [options.format='pdf'] - The output format (pdf|html)
+   * @param {Object} [options.pdfOptions] - The PDF options
+   * @param {Object} [options.styleOptions] - The style options
+   * @returns {Promise<string>} The output file path
    */
   async convert(options) {
     const { input, output, format = 'pdf', pdfOptions = {}, styleOptions = {} } = options;
 
     try {
-      // 阶段1: 读取文件
+      // Stage 1: Read file
       if (this.progressCallback) {
         this.progressCallback('reading_file', {
           phase: 'reading_file',
-          message: '读取Markdown文件...',
+          message: 'Reading Markdown file...',
           progress: 10
         });
       }
 
-      // 读取 Markdown 文件
+      // Read Markdown file
       const markdownContent = await fs.readFile(input, 'utf-8');
       
-      // 阶段2: 开始渲染
+      // Stage 2: Start rendering
       if (this.progressCallback) {
         this.progressCallback('rendering_html', {
           phase: 'rendering_html',
-          message: '渲染HTML内容...',
+          message: 'Rendering HTML content...',
           progress: 20
         });
       }
 
-      // 渲染为 HTML
+      // Render to HTML
       const html = await this.renderer.render(markdownContent, styleOptions);
 
       if (format === 'html') {
-        // 阶段3: 保存HTML
+        // Stage 3: Save HTML
         if (this.progressCallback) {
           this.progressCallback('saving_html', {
             phase: 'saving_html',
-            message: '保存HTML文件...',
+            message: 'Saving HTML file...',
             progress: 90
           });
         }
@@ -94,7 +94,7 @@ export class MarkdownToPdfConverter {
         if (this.progressCallback) {
           this.progressCallback('completed', {
             phase: 'completed',
-            message: 'HTML转换完成',
+            message: 'HTML conversion complete',
             progress: 100
           });
         }
@@ -103,11 +103,11 @@ export class MarkdownToPdfConverter {
       }
 
       if (format === 'pdf') {
-        // 阶段3: 生成PDF
+        // Stage 3: Generate PDF
         if (this.progressCallback) {
           this.progressCallback('generating_pdf', {
             phase: 'generating_pdf',
-            message: '生成PDF文件...',
+            message: 'Generating PDF file...',
             progress: 70
           });
         }
@@ -118,7 +118,7 @@ export class MarkdownToPdfConverter {
         if (this.progressCallback) {
           this.progressCallback('completed', {
             phase: 'completed',
-            message: 'PDF转换完成',
+            message: 'PDF conversion complete',
             progress: 100
           });
         }
@@ -131,7 +131,7 @@ export class MarkdownToPdfConverter {
       if (this.progressCallback) {
         this.progressCallback('error', {
           phase: 'error',
-          message: `转换失败: ${error.message}`,
+          message: `Conversion failed: ${error.message}`,
           error: error.message
         });
       }
@@ -140,7 +140,7 @@ export class MarkdownToPdfConverter {
   }
 
   /**
-   * 获取或创建浏览器实例
+   * Gets or creates a browser instance
    */
   async getBrowser() {
     if (!this.browser || this.browser.isConnected() === false) {
@@ -150,28 +150,28 @@ export class MarkdownToPdfConverter {
   }
 
   /**
-   * 创建优化的页面实例
+   * Creates an optimized page instance
    */
   async createPage() {
     const browser = await this.getBrowser();
     const page = await browser.newPage();
     
-    // 设置页面默认超时为0（无限制）
+    // Set page default timeout to 0 (unlimited)
     page.setDefaultTimeout(0);
     page.setDefaultNavigationTimeout(0);
     
-    // 性能优化设置
+    // Performance optimization settings
     await page.setRequestInterception(true);
     page.on('request', (request) => {
-      // 阻止不必要的资源加载以提高性能
+      // Block unnecessary resource loading to improve performance
       const resourceType = request.resourceType();
       if (['image', 'media', 'font'].includes(resourceType)) {
-        // 除非是必要的字体文件，否则阻止加载
+        // Block loading unless it's a necessary font file
         const url = request.url();
         if (resourceType === 'font' && (url.includes('katex') || url.includes('math'))) {
           request.continue();
         } else if (resourceType === 'image' && url.startsWith('data:')) {
-          // 允许内联图片
+          // Allow inline images
           request.continue();
         } else {
           request.abort();
@@ -181,7 +181,7 @@ export class MarkdownToPdfConverter {
       }
     });
 
-    // 设置视口以优化渲染
+    // Set viewport to optimize rendering
     await page.setViewport({
       width: 1200,
       height: 1600,
@@ -193,7 +193,7 @@ export class MarkdownToPdfConverter {
   }
 
   /**
-   * 清理页面实例
+   * Cleans up a page instance
    */
   async closePage(page) {
     if (page && !page.isClosed()) {
@@ -202,25 +202,25 @@ export class MarkdownToPdfConverter {
     }
   }
   /**
-   * 等待页面渲染完成 - 完全基于条件的等待机制
-   * @param {Object} page - Puppeteer页面对象
+   * Waits for the page to finish rendering - a fully condition-based waiting mechanism
+   * @param {Object} page - The Puppeteer page object
    */
   async waitForPageReady(page) {
     try {
-      // 并行执行多个检查以提高性能
+      // Execute multiple checks in parallel to improve performance
       const checks = [];
 
-      // 检查1: 等待所有图片加载完成（无超时限制）
+      // Check 1: Wait for all images to load (no timeout)
       checks.push(
         page.waitForFunction(() => {
           const images = document.querySelectorAll('img');
           return Array.from(images).every(img => img.complete || img.naturalHeight > 0);
         }).catch((error) => {
-          console.warn('图片加载检查异常:', error.message);
+          console.warn('Image loading check exception:', error.message);
         })
       );
 
-      // 检查2: 等待字体加载完成
+      // Check 2: Wait for fonts to load
       checks.push(
         page.evaluate(() => {
           if (document.fonts && document.fonts.ready) {
@@ -228,30 +228,30 @@ export class MarkdownToPdfConverter {
           }
           return Promise.resolve();
         }).catch(() => {
-          console.warn('字体加载检查失败');
+          console.warn('Font loading check failed');
         })
       );
 
-      // 检查3: 等待CSS动画完成（无超时限制）
+      // Check 3: Wait for CSS animations to complete (no timeout)
       checks.push(
         page.waitForFunction(() => {
           const animations = document.getAnimations ? document.getAnimations() : [];
           return animations.length === 0 || animations.every(anim => anim.playState === 'finished');
         }).catch((error) => {
-          console.warn('动画检查异常:', error.message);
+          console.warn('Animation check exception:', error.message);
         })
       );
 
-      // 并行执行基础检查
+      // Execute basic checks in parallel
       await Promise.allSettled(checks);
 
-      // 检查是否有KaTeX数学公式需要渲染
+      // Check if there are KaTeX math formulas to render
       const hasKatex = await page.evaluate(() => {
         return document.querySelector('.katex') !== null;
       });
 
       if (hasKatex) {
-        // 等待KaTeX渲染完成（无超时限制）
+        // Wait for KaTeX to finish rendering (no timeout)
         await page.waitForFunction(() => {
           const katexElements = document.querySelectorAll('.katex');
           return Array.from(katexElements).every(el => 
@@ -260,55 +260,55 @@ export class MarkdownToPdfConverter {
             el.querySelector('.katex-html') !== null
           );
         }).catch((error) => {
-          console.warn('KaTeX渲染检查异常:', error.message);
+          console.warn('KaTeX rendering check exception:', error.message);
         });
       }
 
-      // 最后等待浏览器完成布局计算
+      // Finally, wait for the browser to finish layout calculations
       await page.evaluate(() => {
         return new Promise(resolve => {
           if (window.requestIdleCallback) {
-            // 完全移除timeout，等待真正的空闲状态
+            // Completely remove timeout, wait for true idle state
             window.requestIdleCallback(resolve);
           } else {
-            // 兼容性回退，立即完成
+            // Compatibility fallback, complete immediately
             resolve();
           }
         });
       });
 
     } catch (error) {
-      console.warn('页面准备检查过程中出现错误，继续执行:', error.message);
+      console.warn('An error occurred during the page readiness check, continuing execution:', error.message);
     }
   }
 
   /**
-   * 生成PDF文件
-   * @param {string} html - HTML内容
-   * @param {string} outputPath - 输出路径
-   * @param {Object} pdfOptions - PDF配置选项
+   * Generates a PDF file
+   * @param {string} html - The HTML content
+   * @param {string} outputPath - The output path
+   * @param {Object} pdfOptions - The PDF configuration options
    */
   async generatePdf(html, outputPath, pdfOptions = {}) {
     let page = null;
     
     try {
-      // 使用优化的页面创建方法
+      // Use the optimized page creation method
       page = await this.createPage();
       
-      // 设置内容，使用优化的PAGE_CONFIG
+      // Set content, using the optimized PAGE_CONFIG
       await page.setContent(html, {
         ...PAGE_CONFIG,
-        waitUntil: ['domcontentloaded', 'networkidle0'] // 优化等待条件
+        waitUntil: ['domcontentloaded', 'networkidle0'] // Optimized wait conditions
       });
 
-      // 智能等待页面渲染完成，而不是固定延时
+      // Intelligently wait for the page to finish rendering, instead of a fixed delay
       await this.waitForPageReady(page);
 
-      // 生成 PDF，移除timeout配置让Puppeteer使用默认行为
+      // Generate PDF, remove timeout configuration to let Puppeteer use default behavior
       const finalPdfOptions = {
         ...PDF_CONFIG,
         ...pdfOptions
-        // 不设置timeout，让Puppeteer根据页面复杂度自动调整
+        // Do not set timeout, let Puppeteer adjust automatically based on page complexity
       };
 
       await page.pdf({
@@ -318,7 +318,7 @@ export class MarkdownToPdfConverter {
 
       console.log(`PDF generated successfully: ${outputPath}`);
     } finally {
-      // 根据配置决定是否关闭页面和浏览器
+      // Decide whether to close the page and browser based on the configuration
       if (page) {
         await this.closePage(page);
       }
@@ -331,15 +331,15 @@ export class MarkdownToPdfConverter {
   }
 
   /**
-   * 关闭浏览器实例
+   * Closes the browser instance
    */
   async close() {
-    // 关闭所有打开的页面
+    // Close all open pages
     for (const page of this.openPages) {
       await this.closePage(page);
     }
     
-    // 清理渲染器资源
+    // Clean up renderer resources
     if (this.renderer && this.renderer.cleanup) {
       this.renderer.cleanup();
     }
@@ -351,15 +351,15 @@ export class MarkdownToPdfConverter {
   }
 
   /**
-   * 批量转换多个文件（性能优化版本）
-   * @param {Array} conversions - 转换任务数组，每个元素包含 {input, output, pdfOptions, styleOptions}
-   * @returns {Promise<Array>} 输出文件路径数组
+   * Batch converts multiple files (performance-optimized version)
+   * @param {Array} conversions - An array of conversion tasks, each element containing {input, output, pdfOptions, styleOptions}
+   * @returns {Promise<Array>} An array of output file paths
    */
   async convertBatch(conversions) {
     const results = [];
     
     try {
-      // 启用实例复用以提高批量转换性能
+      // Enable instance reuse to improve batch conversion performance
       this.reuseInstance = true;
       
       for (const conversion of conversions) {
@@ -372,22 +372,22 @@ export class MarkdownToPdfConverter {
       
       return results;
     } finally {
-      // 批量转换完成后关闭浏览器
+      // Close the browser after batch conversion is complete
       await this.close();
     }
   }
 }
 
 /**
- * 便捷函数：转换 Markdown 文件为 PDF
- * @param {string} inputFile - 输入文件路径
- * @param {string} [outputFile] - 输出文件路径
- * @param {Object} [options] - 转换选项
- * @returns {Promise<string>} 输出文件路径
+ * Convenience function: Converts a Markdown file to PDF
+ * @param {string} inputFile - The input file path
+ * @param {string} [outputFile] - The output file path
+ * @param {Object} [options] - The conversion options
+ * @returns {Promise<string>} The output file path
  */
 export async function convertMarkdownToPdf(inputFile, outputFile, options = {}) {
   const converter = new MarkdownToPdfConverter({
-    reuseInstance: false  // 单次转换不复用实例
+    reuseInstance: false  // Do not reuse instance for single conversion
   });
   
   try {
@@ -403,15 +403,15 @@ export async function convertMarkdownToPdf(inputFile, outputFile, options = {}) 
 }
 
 /**
- * 便捷函数：转换 Markdown 文件为 HTML
- * @param {string} inputFile - 输入文件路径
- * @param {string} [outputFile] - 输出文件路径
- * @param {Object} [options] - 转换选项
- * @returns {Promise<string>} 输出文件路径
+ * Convenience function: Converts a Markdown file to HTML
+ * @param {string} inputFile - The input file path
+ * @param {string} [outputFile] - The output file path
+ * @param {Object} [options] - The conversion options
+ * @returns {Promise<string>} The output file path
  */
 export async function convertMarkdownToHtml(inputFile, outputFile, options = {}) {
   const converter = new MarkdownToPdfConverter({
-    reuseInstance: false  // 单次转换不复用实例
+    reuseInstance: false  // Do not reuse instance for single conversion
   });
   
   try {
@@ -427,14 +427,14 @@ export async function convertMarkdownToHtml(inputFile, outputFile, options = {})
 }
 
 /**
- * 批量转换函数：高性能批量转换多个文件
- * @param {Array} conversions - 转换任务数组
- * @returns {Promise<Array>} 输出文件路径数组
+ * Batch conversion function: High-performance batch conversion of multiple files
+ * @param {Array} conversions - An array of conversion tasks
+ * @returns {Promise<Array>} An array of output file paths
  */
 export async function convertMarkdownBatch(conversions) {
   const converter = new MarkdownToPdfConverter({
-    reuseInstance: true  // 批量转换启用实例复用
-    // 移除页面限制
+    reuseInstance: true  // Enable instance reuse for batch conversion
+    // Remove page limit
   });
   
   return await converter.convertBatch(conversions);

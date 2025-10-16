@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * 合并文件夹中的Markdown文件并转换为PDF
- * 用法: node merge-md-to-pdf.js <文件夹路径> [输出文件名]
+ * Merges Markdown files in a folder and converts them to PDF
+ * Usage: node merge-md-to-pdf.js <folderPath> [outputFileName]
  */
 
 import * as fs from 'fs/promises';
@@ -11,13 +11,13 @@ import { MarkdownToPdfConverter } from './src/converter.js';
 import chalk from 'chalk';
 
 /**
- * 自然排序比较函数，正确处理数字顺序
- * @param {string} a - 第一个文件名
- * @param {string} b - 第二个文件名
- * @returns {number} 排序结果
+ * Natural sort comparison function, correctly handles the order of numbers
+ * @param {string} a - The first filename
+ * @param {string} b - The second filename
+ * @returns {number} The sort result
  */
 function naturalSort(a, b) {
-  // 将文件名分解为数字和非数字部分
+  // Decompose filenames into numeric and non-numeric parts
   const regex = /(\d+|\D+)/g;
   const aParts = a.match(regex) || [];
   const bParts = b.match(regex) || [];
@@ -28,7 +28,7 @@ function naturalSort(a, b) {
     const aPart = aParts[i] || '';
     const bPart = bParts[i] || '';
     
-    // 如果两个部分都是数字，按数字比较
+    // If both parts are numbers, compare them numerically
     if (/^\d+$/.test(aPart) && /^\d+$/.test(bPart)) {
       const numA = parseInt(aPart, 10);
       const numB = parseInt(bPart, 10);
@@ -36,7 +36,7 @@ function naturalSort(a, b) {
         return numA - numB;
       }
     } else {
-      // 按字符串比较
+      // Compare as strings
       if (aPart !== bPart) {
         return aPart.localeCompare(bPart);
       }
@@ -47,115 +47,115 @@ function naturalSort(a, b) {
 }
 
 /**
- * 获取文件夹中的所有Markdown文件并按自然顺序排序
- * @param {string} folderPath - 文件夹路径
- * @returns {Promise<string[]>} 排序后的Markdown文件路径数组
+ * Gets all Markdown files in a folder and sorts them in natural order
+ * @param {string} folderPath - The folder path
+ * @returns {Promise<string[]>} An array of sorted Markdown file paths
  */
 async function getMarkdownFiles(folderPath) {
   try {
     const files = await fs.readdir(folderPath);
     const markdownFiles = files
       .filter(file => /\.md$/i.test(file))
-      .sort(naturalSort) // 使用自然排序，正确处理数字顺序
+      .sort(naturalSort) // Use natural sort to handle numbers correctly
       .map(file => path.join(folderPath, file));
     
     return markdownFiles;
   } catch (error) {
-    throw new Error(`无法读取文件夹: ${error.message}`);
+    throw new Error(`Failed to read folder: ${error.message}`);
   }
 }
 
 /**
- * 读取并合并多个Markdown文件
- * @param {string[]} filePaths - Markdown文件路径数组
- * @returns {Promise<string>} 合并后的Markdown内容
+ * Reads and merges multiple Markdown files
+ * @param {string[]} filePaths - An array of Markdown file paths
+ * @returns {Promise<string>} The merged Markdown content
  */
 async function mergeMarkdownFiles(filePaths) {
   const contents = [];
   
   for (const filePath of filePaths) {
     try {
-      console.log(chalk.blue(`📖 读取文件: ${path.basename(filePath)}`));
+      console.log(chalk.blue(`📖 Reading file: ${path.basename(filePath)}`));
       const content = await fs.readFile(filePath, 'utf-8');
       
-      // 直接添加内容，不添加任何分隔符或文件名标识
-      contents.push(content.trim()); // 去除首尾空白，保持内容整洁
+      // Add content directly, without any separators or filename identifiers
+      contents.push(content.trim()); // Trim whitespace to keep content clean
     } catch (error) {
-      console.warn(chalk.yellow(`⚠️  无法读取文件 ${filePath}: ${error.message}`));
+      console.warn(chalk.yellow(`⚠️  Failed to read file ${filePath}: ${error.message}`));
     }
   }
   
-  // 用双换行符连接内容，确保段落间有适当间距，但不添加分页符
+  // Join content with double newlines to ensure proper spacing between paragraphs, but no page breaks
   return contents.join('\n\n');
 }
 
 /**
- * 将合并的内容写入临时文件
- * @param {string} content - 合并后的Markdown内容
- * @param {string} tempPath - 临时文件路径
+ * Writes the merged content to a temporary file
+ * @param {string} content - The merged Markdown content
+ * @param {string} tempPath - The temporary file path
  */
 async function writeTempFile(content, tempPath) {
   await fs.writeFile(tempPath, content, 'utf-8');
-  console.log(chalk.green(`📝 临时文件已创建: ${tempPath}`));
+  console.log(chalk.green(`📝 Temporary file created: ${tempPath}`));
 }
 
 /**
- * 清理临时文件
- * @param {string} tempPath - 临时文件路径
+ * Cleans up the temporary file
+ * @param {string} tempPath - The temporary file path
  */
 async function cleanupTempFile(tempPath) {
   try {
     await fs.unlink(tempPath);
-    console.log(chalk.gray(`🗑️  临时文件已删除: ${tempPath}`));
+    console.log(chalk.gray(`🗑️  Temporary file deleted: ${tempPath}`));
   } catch (error) {
-    console.warn(chalk.yellow(`⚠️  无法删除临时文件: ${error.message}`));
+    console.warn(chalk.yellow(`⚠️  Failed to delete temporary file: ${error.message}`));
   }
 }
 
 /**
- * 显示帮助信息
+ * Displays help information
  */
 function showHelp() {
   console.log(chalk.cyan.bold(`
 ┌──────────────────────────────────────────┐
-│  📄 Markdown 文件合并转换工具            │
-│  🔗 合并文件夹中的所有Markdown文件       │
-│  📄 转换为单一PDF文档                    │
+│  📄 Markdown File Merge and Convert Tool   │
+│  🔗 Merges all Markdown files in a folder │
+│  📄 Converts to a single PDF document      │
 └──────────────────────────────────────────┘
 `));
   
-  console.log(chalk.blue('用法:'));
-  console.log(chalk.white('  node merge-md-to-pdf.js <文件夹路径> [输出文件名]'));
+  console.log(chalk.blue('Usage:'));
+  console.log(chalk.white('  node merge-md-to-pdf.js <folderPath> [outputFileName]'));
   
-  console.log(chalk.blue('\n参数:'));
-  console.log(chalk.white('  <文件夹路径>     包含Markdown文件的文件夹路径 (必需)'));
-  console.log(chalk.white('  [输出文件名]     输出PDF文件名 (可选, 默认: merged-document.pdf)'));
+  console.log(chalk.blue('\nArguments:'));
+  console.log(chalk.white('  <folderPath>     Path to the folder containing Markdown files (required)'));
+  console.log(chalk.white('  [outputFileName]   Output PDF filename (optional, default: merged-document.pdf)'));
   
-  console.log(chalk.blue('\n选项:'));
-  console.log(chalk.white('  --help, -h       显示帮助信息'));
+  console.log(chalk.blue('\nOptions:'));
+  console.log(chalk.white('  --help, -h       Show help information'));
   
-  console.log(chalk.blue('\n示例:'));
+  console.log(chalk.blue('\nExamples:'));
   console.log(chalk.white('  node merge-md-to-pdf.js ./docs'));
   console.log(chalk.white('  node merge-md-to-pdf.js ./docs combined.pdf'));
   console.log(chalk.white('  node merge-md-to-pdf.js "C:\\Documents\\MyProject" output.pdf'));
   
-  console.log(chalk.blue('\n默认样式:'));
-  console.log(chalk.white('  📏 页边距: 0mm (无边距)'));
-  console.log(chalk.white('  🔤 字体大小: large'));
-  console.log(chalk.white('  🇨🇳 中文字体: auto'));
-  console.log(chalk.white('  💪 文字厚度: medium'));
-  console.log(chalk.white('  📐 行间距: normal'));
-  console.log(chalk.white('  📄 段落间距: normal'));
-  console.log(chalk.white('  🧮 数学间距: tight'));
+  console.log(chalk.blue('\nDefault Styles:'));
+  console.log(chalk.white('  📏 Page Margin: 0mm (no margin)'));
+  console.log(chalk.white('  🔤 Font Size: large'));
+  console.log(chalk.white('  🇨🇳 Chinese Font: auto'));
+  console.log(chalk.white('  💪 Font Weight: medium'));
+  console.log(chalk.white('  📐 Line Spacing: normal'));
+  console.log(chalk.white('  📄 Paragraph Spacing: normal'));
+  console.log(chalk.white('  🧮 Math Spacing: tight'));
 }
 
 /**
- * 主函数
+ * Main function
  */
 async function main() {
   const args = process.argv.slice(2);
   
-  // 检查帮助参数
+  // Check for help argument
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     showHelp();
     if (args.length === 0) {
@@ -169,49 +169,49 @@ async function main() {
   const outputName = args[1] || 'merged-document.pdf';
   const outputPath = path.resolve(outputName);
   
-  // 生成临时Markdown文件路径
+  // Generate temporary Markdown file path
   const tempMarkdownPath = path.join(path.dirname(outputPath), 'temp-merged.md');
   
   try {
-    console.log(chalk.cyan('🚀 开始合并Markdown文件并转换为PDF...'));
-    console.log(chalk.blue(`📁 源文件夹: ${folderPath}`));
-    console.log(chalk.blue(`📄 输出文件: ${outputPath}`));
+    console.log(chalk.cyan('🚀 Starting to merge Markdown files and convert to PDF...'));
+    console.log(chalk.blue(`📁 Source folder: ${folderPath}`));
+    console.log(chalk.blue(`📄 Output file: ${outputPath}`));
     
-    // 检查文件夹是否存在
+    // Check if the folder exists
     try {
       const stats = await fs.stat(folderPath);
       if (!stats.isDirectory()) {
-        throw new Error('指定的路径不是文件夹');
+        throw new Error('The specified path is not a folder');
       }
     } catch (error) {
-      throw new Error(`文件夹不存在或无法访问: ${error.message}`);
+      throw new Error(`Folder does not exist or is not accessible: ${error.message}`);
     }
     
-    // 1. 获取所有Markdown文件
-    console.log(chalk.cyan('📋 扫描Markdown文件...'));
+    // 1. Get all Markdown files
+    console.log(chalk.cyan('📋 Scanning for Markdown files...'));
     const markdownFiles = await getMarkdownFiles(folderPath);
     
     if (markdownFiles.length === 0) {
-      throw new Error('文件夹中没有找到Markdown文件 (.md)');
+      throw new Error('No Markdown files (.md) found in the folder');
     }
     
-    console.log(chalk.green(`✅ 找到 ${markdownFiles.length} 个Markdown文件:`));
+    console.log(chalk.green(`✅ Found ${markdownFiles.length} Markdown files:`));
     markdownFiles.forEach((file, index) => {
       console.log(chalk.gray(`   ${index + 1}. ${path.basename(file)}`));
     });
     
-    // 2. 合并Markdown文件
-    console.log(chalk.cyan('🔗 合并Markdown文件...'));
+    // 2. Merge Markdown files
+    console.log(chalk.cyan('🔗 Merging Markdown files...'));
     const mergedContent = await mergeMarkdownFiles(markdownFiles);
     
-    // 3. 写入临时文件
+    // 3. Write to temporary file
     await writeTempFile(mergedContent, tempMarkdownPath);
     
-    // 4. 转换为PDF（使用CLI中的默认样式选项）
-    console.log(chalk.cyan('📄 转换为PDF...'));
+    // 4. Convert to PDF (using default style options from CLI)
+    console.log(chalk.cyan('📄 Converting to PDF...'));
     const converter = new MarkdownToPdfConverter({
-      reuseInstance: true,  // 启用实例复用以提高性能
-      maxPages: 20          // 增加页面限制以处理大文档
+      reuseInstance: true,  // Enable instance reuse for better performance
+      maxPages: 20          // Increase page limit to handle large documents
     });
     
     await converter.convert({
@@ -230,43 +230,43 @@ async function main() {
         preferCSSPageSize: true
       },
       styleOptions: {
-        // 使用CLI默认的样式选项
-        fontSize: 'large',           // 对应CLI默认的 --font-size large
-        chineseFont: 'auto',         // 对应CLI默认的 --chinese-font auto
-        fontWeight: 'medium',        // 对应CLI默认的 --font-weight medium
-        lineSpacing: 'normal',       // 对应CLI默认的 --line-spacing normal
-        paragraphSpacing: 'normal',  // 对应CLI默认的 --paragraph-spacing normal
-        mathSpacing: 'tight',        // 对应CLI默认的 --math-spacing tight
-        mathEngine: 'auto'           // 对应CLI默认的 --math-engine auto
+        // Use default style options from CLI
+        fontSize: 'large',           // Corresponds to CLI default --font-size large
+        chineseFont: 'auto',         // Corresponds to CLI default --chinese-font auto
+        fontWeight: 'medium',        // Corresponds to CLI default --font-weight medium
+        lineSpacing: 'normal',       // Corresponds to CLI default --line-spacing normal
+        paragraphSpacing: 'normal',  // Corresponds to CLI default --paragraph-spacing normal
+        mathSpacing: 'tight',        // Corresponds to CLI default --math-spacing tight
+        mathEngine: 'auto'           // Corresponds to CLI default --math-engine auto
       }
     });
     
-    // 显式关闭转换器以释放资源
+    // Explicitly close the converter to release resources
     await converter.close();
     
-    // 5. 清理临时文件
+    // 5. Clean up temporary file
     await cleanupTempFile(tempMarkdownPath);
     
-    console.log(chalk.green('✅ PDF转换完成!'));
-    console.log(chalk.blue(`📄 输出文件: ${outputPath}`));
+    console.log(chalk.green('✅ PDF conversion complete!'));
+    console.log(chalk.blue(`📄 Output file: ${outputPath}`));
     
   } catch (error) {
-    console.error(chalk.red('❌ 转换失败:'), error.message);
+    console.error(chalk.red('❌ Conversion failed:'), error.message);
     
-    // 清理临时文件（如果存在）
+    // Clean up temporary file (if it exists)
     try {
       await fs.access(tempMarkdownPath);
       await cleanupTempFile(tempMarkdownPath);
     } catch {
-      // 临时文件不存在，忽略
+      // Temporary file does not exist, ignore
     }
     
     process.exit(1);
   }
 }
 
-// 运行主函数
+// Run the main function
 main().catch(error => {
-  console.error(chalk.red('❌ 未捕获的错误:'), error);
+  console.error(chalk.red('❌ Uncaught error:'), error);
   process.exit(1);
 });

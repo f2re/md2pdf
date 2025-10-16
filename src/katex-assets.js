@@ -1,20 +1,20 @@
 /**
- * KaTeX 本地资源管理模块
+ * KaTeX Local Asset Management Module
  */
 
 import * as fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-// 获取当前文件的目录路径
+// Get the directory path of the current file
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * 将文件转换为 base64 数据 URL
- * @param {string} filePath - 文件路径
- * @param {string} mimeType - MIME 类型
- * @returns {Promise<string>} base64 数据 URL
+ * Converts a file to a base64 data URL
+ * @param {string} filePath - The file path
+ * @param {string} mimeType - The MIME type
+ * @returns {Promise<string>} The base64 data URL
  */
 async function fileToBase64DataUrl(filePath, mimeType) {
   try {
@@ -22,15 +22,15 @@ async function fileToBase64DataUrl(filePath, mimeType) {
     const base64 = fileBuffer.toString('base64');
     return `data:${mimeType};base64,${base64}`;
   } catch (error) {
-    console.warn(`无法读取字体文件 ${filePath}:`, error.message);
+    console.warn(`Failed to read font file ${filePath}:`, error.message);
     return '';
   }
 }
 
 /**
- * 获取字体的 MIME 类型
- * @param {string} fontPath - 字体文件路径
- * @returns {string} MIME 类型
+ * Gets the MIME type of a font
+ * @param {string} fontPath - The font file path
+ * @returns {string} The MIME type
  */
 function getFontMimeType(fontPath) {
   if (fontPath.endsWith('.woff2')) return 'font/woff2';
@@ -40,25 +40,25 @@ function getFontMimeType(fontPath) {
 }
 
 /**
- * 获取完全本地化的 KaTeX CSS（包含内联字体）
- * @returns {Promise<string>} 包含内联字体的 KaTeX CSS
+ * Gets the fully localized KaTeX CSS (with inline fonts)
+ * @returns {Promise<string>} The KaTeX CSS with inline fonts
  */
 export async function getLocalKatexCssWithInlineFonts() {
   try {
-    // 读取 KaTeX CSS
+    // Read KaTeX CSS
     const katexCssPath = join(__dirname, '..', 'assets', 'katex', 'katex.min.css');
     let katexCss = await fs.readFile(katexCssPath, 'utf-8');
     
-    // 字体文件目录
+    // Font file directory
     const fontsDir = join(__dirname, '..', 'assets', 'katex', 'fonts');
     
-    // 匹配所有 url(fonts/...) 的正则表达式
+    // Regular expression to match all url(fonts/...)
     const urlRegex = /url\(fonts\/([^)]+)\)/g;
     
-    // 获取所有匹配的字体文件
+    // Get all matching font files
     const matches = [...katexCss.matchAll(urlRegex)];
     
-    // 为每个字体文件创建 base64 数据 URL
+    // Create a base64 data URL for each font file
     for (const match of matches) {
       const fontFile = match[1];
       const fontPath = join(fontsDir, fontFile);
@@ -66,21 +66,21 @@ export async function getLocalKatexCssWithInlineFonts() {
       const dataUrl = await fileToBase64DataUrl(fontPath, mimeType);
       
       if (dataUrl) {
-        // 替换原始的 url(fonts/...) 为 data URL
+        // Replace the original url(fonts/...) with the data URL
         katexCss = katexCss.replace(match[0], `url(${dataUrl})`);
       }
     }
     
     return katexCss;
   } catch (error) {
-    console.warn('无法生成内联字体的 KaTeX CSS，将使用基本样式:', error.message);
+    console.warn('Failed to generate KaTeX CSS with inline fonts, will use basic styles:', error.message);
     return getBasicKatexStyles();
   }
 }
 
 /**
- * 获取基本的 KaTeX 样式（不依赖字体文件）
- * @returns {string} 基本的 KaTeX 样式
+ * Gets basic KaTeX styles (without relying on font files)
+ * @returns {string} Basic KaTeX styles
  */
 function getBasicKatexStyles() {
   return `

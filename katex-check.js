@@ -1,67 +1,80 @@
 #!/usr/bin/env node
 
 /**
- * 统一KaTeX渲染错误检测脚本
- * 支持快速模式和详细模式
- * 用法: node katex-unifie/**
- * 高级语法检查 - 检测可能导致PDF转换失败的复杂语法
- * @param {string} content - 数学公式内容
- * @returns {Array} 警告信息数组
+ * Unified KaTeX rendering error detection script
+ * Supports quick mode and detailed mode
+ * Usage: node katex-check.js <folderPath> [options]
+ */
+
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import katex from 'katex';
+import chalk from 'chalk';
+import { cpus } from 'os';
+import { 
+  fixSingleFormulaError, 
+  fixSingleDetailedFormulaError 
+} from './llm-fixer.js';
+
+/**
+ * Advanced syntax check - detects complex syntax that may cause PDF conversion to fail
+ * @param {string} content - The content of the math formula
+ * @returns {Array} An array of warning messages
  */
 function advancedSyntaxCheck(content) {
   const warnings = [];
   
-  // 检查1: 单行数学环境中的多行数学环境
-  // 先找到所有的单$公式（排除$$），然后检查其中是否包含gather环境
+  // Check 1: Multi-line math environment in a single-line math environment
+  // First find all single $ formulas (excluding $$), then check if they contain a gather environment
   const singleDollarMatches = content.match(/(?:^|[^$])\$([^$]+?)\$(?:[^$]|$)/g);
   if (singleDollarMatches) {
     singleDollarMatches.forEach(match => {
       if (/\\begin\{gather\*?\}.*?\\end\{gather\*?\}/s.test(match)) {
         warnings.push({
           type: 'environment_mismatch',
-          message: '单行数学环境($...$)中包含多行数学环境(gather*)',
-          suggestion: '使用 $$...$$'
+          message: 'Multi-line math environment (gather*) found in single-line math environment ($...$)',
+          suggestion: 'Use $$...$$'
         });
       }
     });
   }
   
-  // 检查2: 单行数学环境中的 aligned 环境
-  // 先找到所有的单$公式（排除$$），然后检查其中是否包含aligned环境
+  // Check 2: aligned environment in a single-line math environment
+  // First find all single $ formulas (excluding $$), then check if they contain an aligned environment
   if (singleDollarMatches) {
     singleDollarMatches.forEach(match => {
       if (/\\begin\{aligned\}.*?\\end\{aligned\}/s.test(match)) {
         warnings.push({
           type: 'environment_mismatch', 
-          message: '单行数学环境($...$)中包含aligned环境',
-          suggestion: '使用 $$...$$'
+          message: 'aligned environment found in single-line math environment ($...$)',
+          suggestion: 'Use $$...$$'
         });
       }
     });
   }
   
-  // 检查3: array环境列数不一致
+  // Check 3: Inconsistent number of columns in array environment
   const arrayMatches = content.match(/\\begin\{array\}\{([^}]+)\}(.*?)\\end\{array\}/gs);
   if (arrayMatches) {
     arrayMatches.forEach(arrayMatch => {
       const colSpec = arrayMatch.match(/\\begin\{array\}\{([^}]+)\}/)[1];
       const expectedCols = colSpec.length;
-      const rows = arrayMatch.split('\\\\').slice(0, -1); // 排除最后一个空元素
+      const rows = arrayMatch.split('\\\\').slice(0, -1); // Exclude the last empty element
       
       rows.forEach((row, index) => {
         const cells = row.split('&').length;
         if (cells !== expectedCols && cells > 1) {
           warnings.push({
             type: 'array_column_mismatch',
-            message: `数组第${index + 1}行有${cells}列，但定义了${expectedCols}列`,
-            suggestion: '检查数组列数一致性'
+            message: `Array row ${index + 1} has ${cells} columns, but ${expectedCols} were defined`,
+            suggestion: 'Check for consistency in the number of array columns'
           });
         }
       });
     });
   }
   
-  // 检查4: 不支持的命令
+  // Check 4: Unsupported commands
   const unsupportedCommands = [
     '\\multicolumn',
     '\\multirow', 
@@ -76,19 +89,19 @@ function advancedSyntaxCheck(content) {
     if (content.includes(cmd)) {
       warnings.push({
         type: 'unsupported_command',
-        message: `使用了可能不兼容的命令: ${cmd}`,
-        suggestion: '考虑使用KaTeX支持的替代方案'
+        message: `Used a potentially incompatible command: ${cmd}`,
+        suggestion: 'Consider using a KaTeX-supported alternative'
       });
     }
   });
   
-  // 检查5: 复杂嵌套环境
+  // Check 5: Complex nested environments
   const complexNesting = /\\begin\{gather\*?\}.*?\\begin\{aligned\}.*?\\begin\{array\}/gs;
   if (complexNesting.test(content)) {
     warnings.push({
       type: 'complex_nesting',
-      message: '检测到复杂的数学环境嵌套(gather* + aligned + array)',
-      suggestion: '考虑简化数学环境结构'
+      message: 'Detected complex nesting of math environments (gather* + aligned + array)',
+      suggestion: 'Consider simplifying the math environment structure'
     });
   }
   
@@ -96,21 +109,7 @@ function advancedSyntaxCheck(content) {
 }
 
 /**
- * 快速提取并检查数学公式（快速模式）check.js <文件夹路径> [选项]
- */
-
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import katex from 'katex';
-import chalk from 'chalk';
-import { cpus } from 'os';
-import { 
-  fixSingleFormulaError, 
-  fixSingleDetailedFormulaError 
-} from './llm-fixer.js';
-
-/**
- * 数学公式分隔符配置
+ * Math formula delimiter configuration
  */
 const MATH_DELIMITERS = {
   inline: [
@@ -124,7 +123,7 @@ const MATH_DELIMITERS = {
 };
 
 /**
- * KaTeX配置
+ * KaTeX configuration
  */
 const KATEX_CONFIG = {
   throwOnError: true,
@@ -134,24 +133,24 @@ const KATEX_CONFIG = {
 };
 
 /**
- * 转义正则表达式特殊字符
+ * Escapes special characters in a regular expression
  */
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * 自然排序函数 - 正确处理数字顺序
- * @param {string} a - 第一个文件路径
- * @param {string} b - 第二个文件路径
- * @returns {number} 排序结果
+ * Natural sort function - correctly handles the order of numbers
+ * @param {string} a - The first file path
+ * @param {string} b - The second file path
+ * @returns {number} The sort result
  */
 function naturalSort(a, b) {
-  // 提取文件名进行比较
+  // Extract filenames for comparison
   const aName = path.basename(a);
   const bName = path.basename(b);
   
-  // 分割字符串和数字部分
+  // Split strings and number parts
   const aParts = aName.split(/(\d+)/);
   const bParts = bName.split(/(\d+)/);
   
@@ -161,7 +160,7 @@ function naturalSort(a, b) {
     const aPart = aParts[i] || '';
     const bPart = bParts[i] || '';
     
-    // 如果两个部分都是数字，按数值比较
+    // If both parts are numbers, compare them numerically
     if (/^\d+$/.test(aPart) && /^\d+$/.test(bPart)) {
       const aNum = parseInt(aPart, 10);
       const bNum = parseInt(bPart, 10);
@@ -169,7 +168,7 @@ function naturalSort(a, b) {
         return aNum - bNum;
       }
     } else {
-      // 否则按字符串比较
+      // Otherwise, compare them as strings
       if (aPart !== bPart) {
         return aPart.localeCompare(bPart);
       }
@@ -180,19 +179,19 @@ function naturalSort(a, b) {
 }
 
 /**
- * 快速提取并检测数学公式（快速模式）
- * @param {string} content - Markdown内容
- * @returns {Array} 错误数组
+ * Quickly extracts and checks math formulas (quick mode)
+ * @param {string} content - The Markdown content
+ * @returns {Array} An array of errors
  */
 function quickCheckMath(content) {
   const errors = [];
   
-  // 匹配所有可能的数学公式
+  // Match all possible math formulas
   const patterns = [
-    /\$\$([\s\S]*?)\$\$/g,         // 块级公式 $$...$$（允许多行）
-    /\\\[([\s\S]*?)\\\]/g,         // 块级公式 \[...\]（允许多行）
-    /\$([^$\n]+?)\$/g,             // 行内公式 $...$（单行）
-    /\\\(([^)]+?)\\\)/g            // 行内公式 \(...\)
+    /\$\$([\s\S]*?)\$\$/g,         // Block-level formula $$...$$ (allows multiple lines)
+    /\\\[([\s\S]*?)\\\]/g,         // Block-level formula \[...\] (allows multiple lines)
+    /\$([^$\n]+?)\$/g,             // Inline formula $...$ (single line)
+    /\\\(([^)]+?)\\\)/g            // Inline formula \(...\)
   ];
   
   patterns.forEach((pattern, patternIndex) => {
@@ -203,7 +202,7 @@ function quickCheckMath(content) {
       const mathContent = match[1].trim();
       if (!mathContent) continue;
       
-      // 基础 KaTeX 语法检查
+      // Basic KaTeX syntax check
       try {
         katex.renderToString(mathContent, {
           throwOnError: true,
@@ -219,10 +218,10 @@ function quickCheckMath(content) {
           position: match.index,
           type: isBlock ? 'block' : 'inline'
         });
-        continue; // KaTeX 错误时跳过高级检查
+        continue; // Skip advanced check on KaTeX error
       }
       
-      // 高级语法检查 - 检测可能导致PDF转换失败的问题
+      // Advanced syntax check - detects issues that may cause PDF conversion to fail
       const warnings = advancedSyntaxCheck(match[0]);
       warnings.forEach(warning => {
         errors.push({
@@ -242,15 +241,15 @@ function quickCheckMath(content) {
 }
 
 /**
- * 详细提取数学公式（详细模式）
- * @param {string} content - Markdown内容
- * @returns {Array} 数学公式数组
+ * Extracts math formulas in detail (detailed mode)
+ * @param {string} content - The Markdown content
+ * @returns {Array} An array of math formulas
  */
 function extractMathExpressions(content) {
   const mathExpressions = [];
   let processedContent = content;
 
-  // 处理块级数学表达式
+  // Process block-level math expressions
   for (const [startDelim, endDelim] of MATH_DELIMITERS.block) {
     const regex = new RegExp(
       escapeRegExp(startDelim) + '([\\s\\S]*?)' + escapeRegExp(endDelim),
@@ -269,7 +268,7 @@ function extractMathExpressions(content) {
     }
   }
 
-  // 处理行内数学表达式
+  // Process inline math expressions
   for (const [startDelim, endDelim] of MATH_DELIMITERS.inline) {
     const regex = new RegExp(
       escapeRegExp(startDelim) + '([^\\n]*?)' + escapeRegExp(endDelim),
@@ -278,7 +277,7 @@ function extractMathExpressions(content) {
 
     let match;
     while ((match = regex.exec(processedContent)) !== null) {
-      // 避免与块级公式重复
+      // Avoid duplication with block-level formulas
       const isInsideBlock = mathExpressions.some(expr => 
         match.index >= expr.start && match.index < expr.end
       );
@@ -299,9 +298,9 @@ function extractMathExpressions(content) {
 }
 
 /**
- * 检测单个数学公式的KaTeX渲染（详细模式）
- * @param {Object} mathExpr - 数学公式对象
- * @returns {Object} 检测结果
+ * Checks KaTeX rendering for a single math formula (detailed mode)
+ * @param {Object} mathExpr - The math formula object
+ * @returns {Object} The check result
  */
 function checkMathExpression(mathExpr) {
   const result = {
@@ -311,7 +310,7 @@ function checkMathExpression(mathExpr) {
     warnings: []
   };
   
-  // 基础 KaTeX 语法检查
+  // Basic KaTeX syntax check
   try {
     katex.renderToString(mathExpr.content, {
       ...KATEX_CONFIG,
@@ -323,37 +322,37 @@ function checkMathExpression(mathExpr) {
       message: error.message,
       name: error.name
     };
-    return result; // KaTeX 错误时直接返回，不进行高级检查
+    return result; // Return directly on KaTeX error, no advanced check
   }
   
-  // 高级语法检查 - 检测可能导致PDF转换失败的问题
+  // Advanced syntax check - detects issues that may cause PDF conversion to fail
   const warnings = advancedSyntaxCheck(mathExpr.raw);
   if (warnings.length > 0) {
     result.warnings = warnings;
-    // 即使有警告，基础语法正确时仍然认为是成功的
-    // 但会在报告中显示警告信息
+    // Even with warnings, it's still considered successful if the basic syntax is correct
+    // But the warning messages will be displayed in the report
   }
   
   return result;
 }
 
 /**
- * 检测单个Markdown文件（快速模式）
- * @param {string} filePath - 文件路径
- * @returns {Object} 检测结果
+ * Checks a single Markdown file (quick mode)
+ * @param {string} filePath - The file path
+ * @returns {Object} The check result
  */
 async function quickCheckFile(filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const errors = quickCheckMath(content);
     
-    // 区分真正的错误和警告
+    // Differentiate between real errors and warnings
     const realErrors = errors.filter(error => error.severity !== 'warning');
     const warnings = errors.filter(error => error.severity === 'warning');
     
     return {
       file: filePath,
-      success: realErrors.length === 0, // 只有真正的错误才影响成功状态
+      success: realErrors.length === 0, // Only real errors affect the success status
       errors: realErrors,
       warnings: warnings,
       mathCount: errors.length
@@ -370,9 +369,9 @@ async function quickCheckFile(filePath) {
 }
 
 /**
- * 检测单个Markdown文件（详细模式）
- * @param {string} filePath - 文件路径
- * @returns {Object} 检测结果
+ * Checks a single Markdown file (detailed mode)
+ * @param {string} filePath - The file path
+ * @returns {Object} The check result
  */
 async function detailedCheckFile(filePath) {
   try {
@@ -417,10 +416,10 @@ async function detailedCheckFile(filePath) {
 }
 
 /**
- * 获取文件夹中的所有Markdown文件
- * @param {string} folderPath - 文件夹路径
- * @param {boolean} recursive - 是否递归搜索
- * @returns {Array} Markdown文件路径数组
+ * Gets all Markdown files in a folder
+ * @param {string} folderPath - The folder path
+ * @param {boolean} recursive - Whether to search recursively
+ * @returns {Array} An array of Markdown file paths
  */
 async function getMarkdownFiles(folderPath, recursive = true) {
   const markdownFiles = [];
@@ -439,22 +438,22 @@ async function getMarkdownFiles(folderPath, recursive = true) {
         }
       }
     } catch (error) {
-      console.warn(chalk.yellow(`⚠️ 无法读取目录 ${dirPath}: ${error.message}`));
+      console.warn(chalk.yellow(`⚠️ Unable to read directory ${dirPath}: ${error.message}`));
     }
   }
   
   await scanDirectory(folderPath);
   
-  // 使用自然排序确保数字正确排序 (1, 2, 3, ..., 10, 11 而不是 1, 10, 11, 2, 3)
+  // Use natural sort to ensure numbers are sorted correctly (1, 2, 3, ..., 10, 11 instead of 1, 10, 11, 2, 3)
   return markdownFiles.sort(naturalSort);
 }
 
 /**
- * 解析输入路径，支持文件夹、单个文件或多个文件
- * @param {string} primaryPath - 主要路径（第一个参数）
- * @param {Array} additionalPaths - 额外的路径数组
- * @param {boolean} recursive - 是否递归搜索（仅对文件夹有效）
- * @returns {Array} Markdown文件路径数组
+ * Resolves input paths, supporting folders, single files, or multiple files
+ * @param {string} primaryPath - The primary path (the first argument)
+ * @param {Array} additionalPaths - An array of additional paths
+ * @param {boolean} recursive - Whether to search recursively (only for folders)
+ * @returns {Array} An array of Markdown file paths
  */
 async function resolveInputPaths(primaryPath, additionalPaths = [], recursive = true) {
   const allPaths = [primaryPath, ...additionalPaths];
@@ -467,95 +466,95 @@ async function resolveInputPaths(primaryPath, additionalPaths = [], recursive = 
       const stats = await fs.stat(resolvedPath);
       
       if (stats.isDirectory()) {
-        // 如果是目录，扫描其中的 Markdown 文件
+        // If it's a directory, scan for Markdown files in it
         const dirFiles = await getMarkdownFiles(resolvedPath, recursive);
         markdownFiles.push(...dirFiles);
-        console.log(chalk.blue(`📁 扫描目录: ${resolvedPath} (找到 ${dirFiles.length} 个文件)`));
+        console.log(chalk.blue(`📁 Scanning directory: ${resolvedPath} (found ${dirFiles.length} files)`));
       } else if (stats.isFile()) {
-        // 如果是文件，检查是否为 Markdown 文件
+        // If it's a file, check if it's a Markdown file
         if (/\.md$/i.test(path.basename(resolvedPath))) {
           markdownFiles.push(resolvedPath);
-          console.log(chalk.blue(`📄 添加文件: ${resolvedPath}`));
+          console.log(chalk.blue(`📄 Adding file: ${resolvedPath}`));
         } else {
-          console.warn(chalk.yellow(`⚠️ 跳过非Markdown文件: ${resolvedPath}`));
+          console.warn(chalk.yellow(`⚠️ Skipping non-Markdown file: ${resolvedPath}`));
         }
       } else {
-        console.warn(chalk.yellow(`⚠️ 跳过未知类型: ${resolvedPath}`));
+        console.warn(chalk.yellow(`⚠️ Skipping unknown type: ${resolvedPath}`));
       }
     } catch (error) {
-      console.error(chalk.red(`❌ 无法访问路径 ${resolvedPath}: ${error.message}`));
+      console.error(chalk.red(`❌ Unable to access path ${resolvedPath}: ${error.message}`));
     }
   }
   
-  // 去重并排序
+  // Deduplicate and sort
   const uniqueFiles = [...new Set(markdownFiles)];
   return uniqueFiles.sort(naturalSort);
 }
 
 /**
- * 批量处理文件（详细模式使用）
- * @param {Array} files - 文件路径数组
- * @param {number} concurrency - 并发数
- * @param {Function} checkFunction - 检测函数
- * @returns {Array} 检测结果数组
+ * Processes files in batches (used in detailed mode)
+ * @param {Array} files - An array of file paths
+ * @param {number} concurrency - The number of concurrent processes
+ * @param {Function} checkFunction - The check function
+ * @returns {Array} An array of check results
  */
 async function processFilesInBatches(files, concurrency, checkFunction) {
   const results = [];
   const batches = [];
   
-  // 将文件分批
+  // Split files into batches
   for (let i = 0; i < files.length; i += concurrency) {
     batches.push(files.slice(i, i + concurrency));
   }
   
-  console.log(chalk.blue(`📊 使用 ${concurrency} 个并发处理 ${files.length} 个文件`));
+  console.log(chalk.blue(`📊 Processing ${files.length} files with ${concurrency} concurrency`));
   
   for (let i = 0; i < batches.length; i++) {
     const batch = batches[i];
-    console.log(chalk.gray(`处理批次 ${i + 1}/${batches.length} (${batch.length} 个文件)`));
+    console.log(chalk.gray(`Processing batch ${i + 1}/${batches.length} (${batch.length} files)`));
     
-    // 并行处理当前批次
+    // Process the current batch in parallel
     const batchPromises = batch.map(file => checkFunction(file));
     const batchResults = await Promise.all(batchPromises);
     
     results.push(...batchResults);
     
-    // 显示进度
+    // Show progress
     const processed = results.length;
     const percentage = Math.round((processed / files.length) * 100);
-    console.log(chalk.green(`✅ 已处理: ${processed}/${files.length} (${percentage}%)`));
+    console.log(chalk.green(`✅ Processed: ${processed}/${files.length} (${percentage}%)`));
   }
   
   return results;
 }
 
 /**
- * 生成快速报告
- * @param {Array} results - 检测结果数组
- * @param {Object} config - 配置对象
+ * Generates a quick report
+ * @param {Array} results - An array of check results
+ * @param {Object} config - The configuration object
  */
 async function generateQuickReport(results, config = {}) {
   const errorFiles = results.filter(r => !r.success);
   const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
   const totalWarnings = results.reduce((sum, r) => sum + (r.warnings ? r.warnings.length : 0), 0);
   
-  console.log(chalk.cyan('\n📋 检测结果'));
+  console.log(chalk.cyan('\n📋 Check Results'));
   console.log(chalk.cyan('============'));
-  console.log(chalk.blue(`📁 总文件数: ${results.length}`));
-  console.log(chalk.green(`✅ 正常文件: ${results.length - errorFiles.length}`));
-  console.log(chalk.red(`❌ 错误文件: ${errorFiles.length}`));
-  console.log(chalk.red(`💥 错误总数: ${totalErrors}`));
+  console.log(chalk.blue(`📁 Total Files: ${results.length}`));
+  console.log(chalk.green(`✅ Normal Files: ${results.length - errorFiles.length}`));
+  console.log(chalk.red(`❌ Error Files: ${errorFiles.length}`));
+  console.log(chalk.red(`💥 Total Errors: ${totalErrors}`));
   
   if (totalWarnings > 0) {
-    console.log(chalk.yellow(`⚠️ 语法警告: ${totalWarnings}`));
+    console.log(chalk.yellow(`⚠️ Syntax Warnings: ${totalWarnings}`));
   }
   
-  // 显示错误详情
+  // Show error details
   if (errorFiles.length > 0) {
-    console.log(chalk.red('\n💥 错误详情:'));
+    console.log(chalk.red('\n💥 Error Details:'));
     console.log(chalk.red('============'));
     
-    // 对错误文件按自然排序
+    // Sort error files by natural sort
     const sortedErrorFiles = errorFiles.sort((a, b) => naturalSort(a.file, b.file));
     
     let fixedCount = 0;
@@ -568,14 +567,14 @@ async function generateQuickReport(results, config = {}) {
         const error = result.errors[errorIndex];
         
         if (error.formula === 'FILE_ERROR') {
-          console.log(chalk.yellow(`   文件错误: ${error.error}`));
+          console.log(chalk.yellow(`   File error: ${error.error}`));
           continue;
         }
         
-        console.log(chalk.yellow(`   公式 ${errorIndex + 1}: ${error.formula}`));
-        console.log(chalk.red(`   错误: ${error.error}`));
+        console.log(chalk.yellow(`   Formula ${errorIndex + 1}: ${error.formula}`));
+        console.log(chalk.red(`   Error: ${error.error}`));
         
-        // 如果启用了自动纠错
+        // If auto-fix is enabled
         if (config.autoFix) {
           const fixed = await fixSingleFormulaError(error, result.file, {
             autoConfirm: config.autoConfirm
@@ -588,15 +587,15 @@ async function generateQuickReport(results, config = {}) {
     }
     
     if (config.autoFix && fixedCount > 0) {
-      console.log(chalk.green(`\n🎉 成功修正了 ${fixedCount} 个公式错误！`));
-      console.log(chalk.yellow('💡 建议重新运行检测以确认修正结果'));
+      console.log(chalk.green(`\n🎉 Successfully fixed ${fixedCount} formula errors!`));
+      console.log(chalk.yellow('💡 It is recommended to run the check again to confirm the fix'));
     }
   }
   
-  // 显示警告信息（如果有的话）
+  // Show warning messages (if any)
   const warningFiles = results.filter(r => r.warnings && r.warnings.length > 0);
   if (warningFiles.length > 0) {
-    console.log(chalk.yellow('\n⚠️ 语法警告:'));
+    console.log(chalk.yellow('\n⚠️ Syntax Warnings:'));
     console.log(chalk.yellow('============'));
     
     const sortedWarningFiles = warningFiles.sort((a, b) => naturalSort(a.file, b.file));
@@ -607,38 +606,34 @@ async function generateQuickReport(results, config = {}) {
       
       for (let warningIndex = 0; warningIndex < result.warnings.length; warningIndex++) {
         const warning = result.warnings[warningIndex];
-        console.log(chalk.yellow(`   ⚠️ 警告 ${warningIndex + 1}: ${warning.formula || '公式'}`));
-        console.log(chalk.yellow(`   问题: ${warning.error}`));
+        console.log(chalk.yellow(`   ⚠️ Warning ${warningIndex + 1}: ${warning.formula || 'Formula'}`));
+        console.log(chalk.yellow(`   Problem: ${warning.error}`));
         if (warning.suggestion) {
-          console.log(chalk.cyan(`   建议: ${warning.suggestion}`));
+          console.log(chalk.cyan(`   Suggestion: ${warning.suggestion}`));
         }
       }
     }
     
-    console.log(chalk.yellow('\n💡 这些警告可能导致PDF转换失败，建议修复'));
+    console.log(chalk.yellow('\n💡 These warnings may cause PDF conversion to fail, it is recommended to fix them'));
   }
   
-  // 总结
+  // Summary
   if (errorFiles.length === 0 && totalWarnings === 0) {
-    console.log(chalk.green('\n🎉 所有文件的KaTeX公式都正常！'));
+    console.log(chalk.green('\n🎉 All KaTeX formulas in all files are normal!'));
     return true;
   } else if (errorFiles.length === 0) {
-    console.log(chalk.yellow('\n✅ 所有KaTeX公式语法正确！'));
-    console.log(chalk.yellow('⚠️ 但发现一些可能影响PDF转换的警告'));
-    return true; // 只有警告时仍然返回成功
+    console.log(chalk.yellow('\n✅ All KaTeX formulas are syntactically correct!'));
+    console.log(chalk.yellow('⚠️ But some warnings that may affect PDF conversion were found'));
+    return true; // Still return success when there are only warnings
   } else {
-    return false; // 有真正的错误
+    return false; // There are real errors
   }
 }
 
 /**
- * 生成详细报告
- * @param {Array} results - 检测结果数组
- */
-/**
- * 生成详细报告
- * @param {Array} results - 检测结果数组
- * @param {Object} config - 配置对象
+ * Generates a detailed report
+ * @param {Array} results - An array of check results
+ * @param {Object} config - The configuration object
  */
 async function generateDetailedReport(results, config = {}) {
   const totalFiles = results.length;
@@ -647,29 +642,29 @@ async function generateDetailedReport(results, config = {}) {
   const totalMathExpressions = results.reduce((sum, r) => sum + r.mathCount, 0);
   const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
   
-  console.log(chalk.cyan('\n📋 KaTeX渲染检测报告'));
+  console.log(chalk.cyan('\n📋 KaTeX Rendering Check Report'));
   console.log(chalk.cyan('========================'));
   
-  // 总体统计
-  console.log(chalk.blue(`📁 扫描文件数: ${totalFiles}`));
-  console.log(chalk.green(`✅ 成功文件数: ${successFiles}`));
-  console.log(chalk.red(`❌ 错误文件数: ${errorFiles}`));
-  console.log(chalk.blue(`🧮 数学公式总数: ${totalMathExpressions}`));
-  console.log(chalk.red(`💥 渲染错误总数: ${totalErrors}`));
+  // Overall statistics
+  console.log(chalk.blue(`📁 Scanned Files: ${totalFiles}`));
+  console.log(chalk.green(`✅ Successful Files: ${successFiles}`));
+  console.log(chalk.red(`❌ Error Files: ${errorFiles}`));
+  console.log(chalk.blue(`🧮 Total Math Formulas: ${totalMathExpressions}`));
+  console.log(chalk.red(`💥 Total Rendering Errors: ${totalErrors}`));
   
-  // 统计警告数量
+  // Count warnings
   const warningFiles = results.filter(r => r.success && r.warnings && r.warnings.length > 0).length;
   const totalWarnings = results.reduce((sum, r) => sum + ((r.warnings && r.warnings.length) || 0), 0);
   
   if (totalWarnings > 0) {
-    console.log(chalk.yellow(`⚠️ 语法警告总数: ${totalWarnings}`));
+    console.log(chalk.yellow(`⚠️ Total Syntax Warnings: ${totalWarnings}`));
   }
   
   if (errorFiles > 0) {
-    console.log(chalk.red('\n💥 详细错误信息:'));
+    console.log(chalk.red('\n💥 Detailed Error Information:'));
     console.log(chalk.red('=================='));
     
-    // 对错误文件按自然排序
+    // Sort error files by natural sort
     const sortedErrorFiles = results.filter(r => !r.success).sort((a, b) => naturalSort(a.file, b.file));
     
     let fixedCount = 0;
@@ -677,18 +672,18 @@ async function generateDetailedReport(results, config = {}) {
     for (let fileIndex = 0; fileIndex < sortedErrorFiles.length; fileIndex++) {
       const result = sortedErrorFiles[fileIndex];
       console.log(chalk.red(`\n${fileIndex + 1}. ${path.basename(result.file)}`));
-      console.log(chalk.gray(`   路径: ${result.file}`));
+      console.log(chalk.gray(`   Path: ${result.file}`));
       
       for (let errorIndex = 0; errorIndex < result.errors.length; errorIndex++) {
         const error = result.errors[errorIndex];
         const expr = error.expression;
         
-        console.log(chalk.yellow(`   错误 ${errorIndex + 1}:`));
-        console.log(chalk.yellow(`   类型: ${expr.type || 'unknown'}`));
-        console.log(chalk.yellow(`   公式: ${expr.raw || expr.content || 'N/A'}`));
-        console.log(chalk.red(`   错误: ${error.error.message}`));
+        console.log(chalk.yellow(`   Error ${errorIndex + 1}:`));
+        console.log(chalk.yellow(`   Type: ${expr.type || 'unknown'}`));
+        console.log(chalk.yellow(`   Formula: ${expr.raw || expr.content || 'N/A'}`));
+        console.log(chalk.red(`   Error: ${error.error.message}`));
         
-        // 如果启用了自动纠错
+        // If auto-fix is enabled
         if (config.autoFix && expr.raw && expr.raw !== 'FILE_READ_ERROR') {
           const fixed = await fixSingleDetailedFormulaError(error, result.file, {
             autoConfirm: config.autoConfirm
@@ -701,14 +696,14 @@ async function generateDetailedReport(results, config = {}) {
     }
     
     if (config.autoFix && fixedCount > 0) {
-      console.log(chalk.green(`\n🎉 成功修正了 ${fixedCount} 个公式错误！`));
-      console.log(chalk.yellow('💡 建议重新运行检测以确认修正结果'));
+      console.log(chalk.green(`\n🎉 Successfully fixed ${fixedCount} formula errors!`));
+      console.log(chalk.yellow('💡 It is recommended to run the check again to confirm the fix'));
     }
   }
   
-  // 显示警告信息
+  // Show warning messages
   if (warningFiles > 0) {
-    console.log(chalk.yellow('\n⚠️ 语法警告信息:'));
+    console.log(chalk.yellow('\n⚠️ Syntax Warning Information:'));
     console.log(chalk.yellow('=================='));
     
     const sortedWarningFiles = results.filter(r => r.success && r.warnings && r.warnings.length > 0)
@@ -717,39 +712,39 @@ async function generateDetailedReport(results, config = {}) {
     for (let fileIndex = 0; fileIndex < sortedWarningFiles.length; fileIndex++) {
       const result = sortedWarningFiles[fileIndex];
       console.log(chalk.yellow(`\n${fileIndex + 1}. ${path.basename(result.file)}`));
-      console.log(chalk.gray(`   路径: ${result.file}`));
+      console.log(chalk.gray(`   Path: ${result.file}`));
       
       for (let warningIndex = 0; warningIndex < result.warnings.length; warningIndex++) {
         const warning = result.warnings[warningIndex];
-        console.log(chalk.yellow(`   警告 ${warningIndex + 1}:`));
-        console.log(chalk.yellow(`   类型: ${warning.type}`));
-        console.log(chalk.yellow(`   问题: ${warning.message}`));
-        console.log(chalk.cyan(`   建议: ${warning.suggestion}`));
+        console.log(chalk.yellow(`   Warning ${warningIndex + 1}:`));
+        console.log(chalk.yellow(`   Type: ${warning.type}`));
+        console.log(chalk.yellow(`   Problem: ${warning.message}`));
+        console.log(chalk.cyan(`   Suggestion: ${warning.suggestion}`));
       }
     }
     
-    console.log(chalk.yellow('\n💡 这些警告可能导致PDF转换失败，建议修复'));
+    console.log(chalk.yellow('\n💡 These warnings may cause PDF conversion to fail, it is recommended to fix them'));
   }
   
-  // 成功率统计
+  // Success rate statistics
   const successRate = totalFiles > 0 ? Math.round((successFiles / totalFiles) * 100) : 100;
-  console.log(chalk.cyan(`\n📊 成功率: ${successRate}%`));
+  console.log(chalk.cyan(`\n📊 Success Rate: ${successRate}%`));
   
   if (successRate === 100 && totalWarnings === 0) {
-    console.log(chalk.green('🎉 所有文件的KaTeX公式都能正确渲染！'));
+    console.log(chalk.green('🎉 All KaTeX formulas in all files can be rendered correctly!'));
     return true;
   } else if (successRate === 100) {
-    console.log(chalk.yellow('✅ 所有KaTeX公式语法正确！'));
-    console.log(chalk.yellow('⚠️ 但发现一些可能影响PDF转换的警告'));
-    return true; // 只有警告时仍然返回成功
+    console.log(chalk.yellow('✅ All KaTeX formulas are syntactically correct!'));
+    console.log(chalk.yellow('⚠️ But some warnings that may affect PDF conversion were found'));
+    return true; // Still return success when there are only warnings
   } else {
-    console.log(chalk.yellow('⚠️ 发现渲染错误，请检查上述详细信息'));
+    console.log(chalk.yellow('⚠️ Rendering errors were found, please check the detailed information above'));
     return false;
   }
 }
 
 /**
- * 解析命令行参数
+ * Parses command-line arguments
  */
 function parseArguments() {
   const args = process.argv.slice(2);
@@ -784,7 +779,7 @@ function parseArguments() {
     } else if (arg.startsWith('--concurrency=')) {
       config.concurrency = parseInt(arg.split('=')[1]) || cpus().length;
     } else if (!arg.startsWith('-')) {
-      // 如果不是选项，则是文件/目录路径
+      // If it's not an option, it's a file/directory path
       if (!config.folderPath) {
         config.folderPath = arg;
       } else {
@@ -793,7 +788,7 @@ function parseArguments() {
     }
   }
   
-  // 默认使用快速模式
+  // Use quick mode by default
   if (!config.quick && !config.detailed) {
     config.quick = true;
   }
@@ -802,50 +797,50 @@ function parseArguments() {
 }
 
 /**
- * 显示帮助信息
+ * Displays help information
  */
 function showHelp() {
-  console.log(chalk.cyan('KaTeX渲染错误检测脚本 - 统一版'));
+  console.log(chalk.cyan('KaTeX Rendering Error Detection Script - Unified Version'));
   console.log(chalk.cyan('================================'));
-  console.log(chalk.blue('\n用法:'));
-  console.log(chalk.white('  node katex-check.js <路径> [更多路径...] [选项]'));
+  console.log(chalk.blue('\nUsage:'));
+  console.log(chalk.white('  node katex-check.js <path> [more paths...] [options]'));
   console.log(chalk.white(''));
-  console.log(chalk.white('  <路径> 可以是:'));
-  console.log(chalk.white('    • 文件夹路径 (扫描其中的 .md 文件)'));
-  console.log(chalk.white('    • 单个 .md 文件'));
-  console.log(chalk.white('    • 多个 .md 文件 (空格分隔)'));
+  console.log(chalk.white('  <path> can be:'));
+  console.log(chalk.white('    • A folder path (scans for .md files in it)'));
+  console.log(chalk.white('    • A single .md file'));
+  console.log(chalk.white('    • Multiple .md files (space-separated)'));
   
-  console.log(chalk.blue('\n模式选项:'));
-  console.log(chalk.white('  --quick, -q        快速模式 (默认)'));
-  console.log(chalk.white('  --detailed, -d     详细模式'));
+  console.log(chalk.blue('\nMode Options:'));
+  console.log(chalk.white('  --quick, -q        Quick mode (default)'));
+  console.log(chalk.white('  --detailed, -d     Detailed mode'));
   
-  console.log(chalk.blue('\n纠错选项:'));
-  console.log(chalk.white('  --auto-fix, -f     启用自动纠错功能'));
-  console.log(chalk.white('  --auto-confirm, -y 自动确认所有修正 (与 --auto-fix 配合使用)'));
+  console.log(chalk.blue('\nAuto-fix Options:'));
+  console.log(chalk.white('  --auto-fix, -f     Enable auto-fix feature'));
+  console.log(chalk.white('  --auto-confirm, -y Automatically confirm all fixes (use with --auto-fix)'));
   
-  console.log(chalk.blue('\n其他选项:'));
-  console.log(chalk.white('  --no-recursive     不递归搜索子目录 (仅对文件夹有效)'));
-  console.log(chalk.white('  --concurrency=N    设置并发数 (默认: CPU核心数)'));
-  console.log(chalk.white('  --help, -h         显示帮助信息'));
+  console.log(chalk.blue('\nOther Options:'));
+  console.log(chalk.white('  --no-recursive     Do not search subdirectories recursively (only for folders)'));
+  console.log(chalk.white('  --concurrency=N    Set the number of concurrent processes (default: number of CPU cores)'));
+  console.log(chalk.white('  --help, -h         Show help information'));
   
-  console.log(chalk.blue('\n示例:'));
-  console.log(chalk.white('  node katex-check.js ./docs                            # 扫描文件夹'));
-  console.log(chalk.white('  node katex-check.js README.md                         # 检查单个文件'));
-  console.log(chalk.white('  node katex-check.js file1.md file2.md file3.md        # 检查多个文件'));
-  console.log(chalk.white('  node katex-check.js ./docs README.md                  # 混合：文件夹+文件'));
-  console.log(chalk.white('  node katex-check.js ./docs --detailed                 # 详细模式'));
-  console.log(chalk.white('  node katex-check.js ./docs -f                         # 快速模式 + 纠错'));
-  console.log(chalk.white('  node katex-check.js file.md -f -y                     # 文件 + 自动纠错'));
-  console.log(chalk.white('  node katex-check.js ./docs -d -f --concurrency=8      # 详细模式 + 纠错'));
+  console.log(chalk.blue('\nExamples:'));
+  console.log(chalk.white('  node katex-check.js ./docs                            # Scan a folder'));
+  console.log(chalk.white('  node katex-check.js README.md                         # Check a single file'));
+  console.log(chalk.white('  node katex-check.js file1.md file2.md file3.md        # Check multiple files'));
+  console.log(chalk.white('  node katex-check.js ./docs README.md                  # Mix: folder + file'));
+  console.log(chalk.white('  node katex-check.js ./docs --detailed                 # Detailed mode'));
+  console.log(chalk.white('  node katex-check.js ./docs -f                         # Quick mode + auto-fix'));
+  console.log(chalk.white('  node katex-check.js file.md -f -y                     # File + auto-fix'));
+  console.log(chalk.white('  node katex-check.js ./docs -d -f --concurrency=8      # Detailed mode + auto-fix'));
   
-  console.log(chalk.blue('\n模式说明:'));
-  console.log(chalk.white('  快速模式: 速度极快，简洁报告，适合日常使用'));
-  console.log(chalk.white('  详细模式: 完整分析，详细报告，适合深度调试'));
-  console.log(chalk.white('  纠错功能: 使用 LMStudio API 自动修正错误的 LaTeX 公式'));
+  console.log(chalk.blue('\nMode Description:'));
+  console.log(chalk.white('  Quick mode: Extremely fast, concise report, suitable for daily use'));
+  console.log(chalk.white('  Detailed mode: Complete analysis, detailed report, suitable for in-depth debugging'));
+  console.log(chalk.white('  Auto-fix feature: Automatically fixes incorrect LaTeX formulas using the LMStudio API'));
 }
 
 /**
- * 主函数
+ * Main function
  */
 async function main() {
   const config = parseArguments();
@@ -856,64 +851,64 @@ async function main() {
   }
   
   if (!config.folderPath) {
-    console.error(chalk.red('❌ 请提供至少一个文件或文件夹路径'));
+    console.error(chalk.red('❌ Please provide at least one file or folder path'));
     showHelp();
     process.exit(1);
   }
   
   try {
-    const mode = config.quick ? '快速' : '详细';
-    console.log(chalk.cyan(`🚀 开始KaTeX渲染检测 (${mode}模式)...`));
+    const mode = config.quick ? 'Quick' : 'Detailed';
+    console.log(chalk.cyan(`🚀 Starting KaTeX rendering check (${mode} mode)...`));
     if (config.autoFix) {
-      console.log(chalk.magenta(`🔧 纠错功能: 已启用 ${config.autoConfirm ? '(自动确认)' : '(手动确认)'}`));
+      console.log(chalk.magenta(`🔧 Auto-fix feature: Enabled ${config.autoConfirm ? '(auto-confirm)' : '(manual confirm)'}`));
     }
     
-    // 解析输入路径
-    console.log(chalk.cyan('\n📋 解析输入路径...'));
+    // Resolve input paths
+    console.log(chalk.cyan('\n📋 Resolving input paths...'));
     const markdownFiles = await resolveInputPaths(config.folderPath, config.filePaths, config.recursive);
     
     if (markdownFiles.length === 0) {
-      console.log(chalk.yellow('⚠️ 未找到Markdown文件'));
+      console.log(chalk.yellow('⚠️ No Markdown files found'));
       return;
     }
     
-    console.log(chalk.green(`\n✅ 总共找到 ${markdownFiles.length} 个Markdown文件`));
+    console.log(chalk.green(`\n✅ Found a total of ${markdownFiles.length} Markdown files`));
     
     if (config.detailed) {
-      console.log(chalk.blue(`⚡ 并发数: ${config.concurrency}`));
+      console.log(chalk.blue(`⚡ Concurrency: ${config.concurrency}`));
     }
     
-    // 开始检测
-    console.log(chalk.cyan(`\n🔍 开始检测KaTeX渲染 (${mode}模式)...`));
+    // Start checking
+    console.log(chalk.cyan(`\n🔍 Starting KaTeX rendering check (${mode} mode)...`));
     const startTime = Date.now();
     
     let results;
     let hasNoErrors;
     
     if (config.quick) {
-      // 快速模式
+      // Quick mode
       results = await Promise.all(markdownFiles.map(quickCheckFile));
       hasNoErrors = await generateQuickReport(results, config);
     } else {
-      // 详细模式
+      // Detailed mode
       results = await processFilesInBatches(markdownFiles, config.concurrency, detailedCheckFile);
       hasNoErrors = await generateDetailedReport(results, config);
     }
     
     const endTime = Date.now();
-    console.log(chalk.cyan(`\n⏱️ 总耗时: ${((endTime - startTime) / 1000).toFixed(2)}秒`));
+    console.log(chalk.cyan(`\n⏱️ Total time: ${((endTime - startTime) / 1000).toFixed(2)}s`));
     
-    // 根据结果设置退出码
+    // Set exit code based on the result
     process.exit(hasNoErrors ? 0 : 1);
     
   } catch (error) {
-    console.error(chalk.red('❌ 检测失败:'), error.message);
+    console.error(chalk.red('❌ Check failed:'), error.message);
     process.exit(1);
   }
 }
 
-// 运行主函数
+// Run the main function
 main().catch(error => {
-  console.error(chalk.red('❌ 未捕获的错误:'), error);
+  console.error(chalk.red('❌ Uncaught error:'), error);
   process.exit(1);
 });

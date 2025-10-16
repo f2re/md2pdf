@@ -1,21 +1,21 @@
 /**
- * 模块入口文件 - 导出所有公共API
+ * Module entry file - exports all public APIs
  */
 
-// 导出主要转换器类和函数
+// Export main converter class and functions
 export { MarkdownToPdfConverter, convertMarkdownToPdf, convertMarkdownToHtml, convertMarkdownBatch } from './converter.js';
 
-// 导出渲染器
+// Export renderer
 export { MarkdownLatexRenderer } from './renderer.js';
 
-// 导出工具函数
+// Export utility functions
 export { escapeHtml, escapeRegExp, getOutputPath, fileExists } from './utils.js';
 
-// 导出配置选项
+// Export configuration options
 export * from './config.js';
 
-// 导出模板函数
+// Export template functions
 export { generateHtmlDocument, getCssStyles, generateMathHtml } from './template.js';
 
-// 导出CLI相关（可选）
+// Export CLI related (optional)
 export { createCLI, showTitle, runCLI } from './cli.js';

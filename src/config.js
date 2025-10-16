@@ -1,9 +1,9 @@
 /**
- * 配置选项模块
+ * Configuration Options Module
  */
 
 /**
- * 数学公式分隔符配置
+ * Math formula delimiter configuration
  */
 export const MATH_DELIMITERS = {
   inline: [
@@ -17,7 +17,7 @@ export const MATH_DELIMITERS = {
 };
 
 /**
- * Markdown-it 默认配置
+ * Markdown-it default configuration
  */
 export const MARKDOWN_CONFIG = {
   html: true,
@@ -27,37 +27,37 @@ export const MARKDOWN_CONFIG = {
 };
 
 /**
- * KaTeX 渲染配置
+ * KaTeX rendering configuration
  */
 export const KATEX_CONFIG = {
-  // 在渲染器中会覆盖为 true，以便捕获错误并回退到 MathJax
+  // Will be overridden to true in the renderer to catch errors and fall back to MathJax
   throwOnError: false,
   output: 'html',
   trust: false,
-  strict: false  // 完全禁用严格模式警告，包括Unicode字符警告
+  strict: false  // Completely disable strict mode warnings, including Unicode character warnings
 };
 
 /**
- * 数学渲染引擎配置
+ * Math rendering engine configuration
  */
 export const MATH_ENGINE = {
-  AUTO: 'auto',      // 优先 KaTeX，失败回退 MathJax
-  KATEX: 'katex',    // 强制使用 KaTeX
-  MATHJAX: 'mathjax' // 强制使用 MathJax
+  AUTO: 'auto',      // Prioritize KaTeX, fall back to MathJax on failure
+  KATEX: 'katex',    // Force the use of KaTeX
+  MATHJAX: 'mathjax' // Force the use of MathJax
 };
 
 export const DEFAULT_MATH_ENGINE = MATH_ENGINE.AUTO;
 
 /**
- * MathJax CDN（v3，TeX-CHTML 输出）
+ * MathJax CDN (v3, TeX-CHTML output)
  */
 
 /**
- * Puppeteer 浏览器配置
+ * Puppeteer browser configuration
  */
 export const BROWSER_CONFIG = {
   headless: 'new',
-  timeout: 0,  // 浏览器启动无超时限制
+  timeout: 0,  // No timeout for browser launch
   args: [
     '--no-sandbox', 
     '--disable-setuid-sandbox',
@@ -67,12 +67,12 @@ export const BROWSER_CONFIG = {
     '--disable-background-timer-throttling',
     '--disable-renderer-backgrounding',
     '--disable-backgrounding-occluded-windows',
-    '--no-timeout'  // 禁用内部超时
+    '--no-timeout'  // Disable internal timeout
   ]
 };
 
 /**
- * PDF 生成默认配置
+ * PDF generation default configuration
  */
 export const PDF_CONFIG = {
   format: 'A4',
@@ -87,20 +87,20 @@ export const PDF_CONFIG = {
 };
 
 /**
- * 页面加载配置
+ * Page loading configuration
  */
 export const PAGE_CONFIG = {
   waitUntil: ['load', 'networkidle0'],
-  timeout: 0  // 0 表示无超时限制
+  timeout: 0  // 0 means no timeout
 };
 
 /**
- * MathJax 渲染等待时间
+ * MathJax rendering wait time
  */
-// 纯本地 MathJax 渲染在 Node 侧完成，无需等待浏览器加载
+// Purely local MathJax rendering is done on the Node side, no need to wait for browser loading
 
 /**
- * 字体大小配置
+ * Font size configuration
  */
 export const FONT_SIZE_CONFIG = {
   small: '12px',
@@ -110,12 +110,12 @@ export const FONT_SIZE_CONFIG = {
 };
 
 /**
- * 默认字体大小
+ * Default font size
  */
 export const DEFAULT_FONT_SIZE = 'medium';
 
 /**
- * 中文字体配置
+ * Chinese font configuration
  */
 export const CHINESE_FONT_CONFIG = {
   simsun: 'SimSun, "宋体", serif',
@@ -127,12 +127,12 @@ export const CHINESE_FONT_CONFIG = {
 };
 
 /**
- * 默认中文字体
+ * Default Chinese font
  */
 export const DEFAULT_CHINESE_FONT = 'auto';
 
 /**
- * 文字厚度配置
+ * Font weight configuration
  */
 export const FONT_WEIGHT_CONFIG = {
   light: '300',
@@ -144,12 +144,12 @@ export const FONT_WEIGHT_CONFIG = {
 };
 
 /**
- * 默认文字厚度
+ * Default font weight
  */
 export const DEFAULT_FONT_WEIGHT = 'normal';
 
 /**
- * 行间距配置
+ * Line spacing configuration
  */
 export const LINE_SPACING_CONFIG = {
   tight: '1.2',
@@ -159,12 +159,12 @@ export const LINE_SPACING_CONFIG = {
 };
 
 /**
- * 默认行间距
+ * Default line spacing
  */
 export const DEFAULT_LINE_SPACING = 'normal';
 
 /**
- * 段落间距配置
+ * Paragraph spacing configuration
  */
 export const PARAGRAPH_SPACING_CONFIG = {
   tight: '0.5em',
@@ -174,12 +174,12 @@ export const PARAGRAPH_SPACING_CONFIG = {
 };
 
 /**
- * 默认段落间距
+ * Default paragraph spacing
  */
 export const DEFAULT_PARAGRAPH_SPACING = 'normal';
 
 /**
- * 数学公式上下边距配置
+ * Vertical margin configuration for math formulas
  */
 export const MATH_SPACING_CONFIG = {
   tight: '10px',
@@ -189,6 +189,6 @@ export const MATH_SPACING_CONFIG = {
 };
 
 /**
- * 默认数学公式间距
+ * Default math formula spacing
  */
 export const DEFAULT_MATH_SPACING = 'normal';

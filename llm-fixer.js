@@ -1,6 +1,6 @@
 /**
- * LLM 自动纠错模块
- * 负责调用 LMStudio 或 Ollama API 修正 LaTeX 公式错误
+ * LLM Auto-Correction Module
+ * Responsible for calling LMStudio or Ollama API to correct LaTeX formula errors
  */
 
 import readline from 'readline';
@@ -9,35 +9,35 @@ import katex from 'katex';
 import * as fs from 'fs/promises';
 
 /**
- * LMStudio API 配置
+ * LMStudio API Configuration
  */
 export const LMSTUDIO_CONFIG = {
   baseUrl: 'http://localhost:1234',
   model: 'qwen/qwen3-4b-thinking-2507',
-  systemPrompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+  systemPrompt: 'Based on the input latex and katex parsing error, output the corrected latex formula. Do not output anything else, just the corrected formula.'
 };
 
 /**
- * Ollama API 配置
+ * Ollama API Configuration
  */
 export const OLLAMA_CONFIG = {
   baseUrl: 'http://localhost:11434',
   model: 'qwen2.5:7b',
-  systemPrompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+  systemPrompt: 'Based on the input latex and katex parsing error, output the corrected latex formula. Do not output anything else, just the corrected formula.'
 };
 
 /**
- * OpenAI 兼容 API 配置
+ * OpenAI Compatible API Configuration
  */
 export const OPENAI_CONFIG = {
   baseUrl: 'https://api.openai.com',
   model: 'gpt-3.5-turbo',
   apiKey: process.env.OPENAI_API_KEY || '',
-  systemPrompt: '根据输入的latex和katex解析报错,输出修正过后的latex公式,不要输出其他任何东西,只要修正后的公式'
+  systemPrompt: 'Based on the input latex and katex parsing error, output the corrected latex formula. Do not output anything else, just the corrected formula.'
 };
 
 /**
- * LLM 提供商类型
+ * LLM Provider Types
  */
 export const LLM_PROVIDERS = {
   LMSTUDIO: 'lmstudio',
@@ -46,7 +46,7 @@ export const LLM_PROVIDERS = {
 };
 
 /**
- * KaTeX 验证配置
+ * KaTeX Validation Configuration
  */
 const KATEX_VALIDATION_CONFIG = {
   throwOnError: true,
@@ -56,35 +56,35 @@ const KATEX_VALIDATION_CONFIG = {
 };
 
 /**
- * 提取非思维链内容（去除 <think> 标签内的内容）
- * @param {string} content - 包含思维链的完整内容
- * @returns {string} 提取的最终答案
+ * Extracts non-chain-of-thought content (removes content within <think> tags)
+ * @param {string} content - The full content including chain-of-thought
+ * @returns {string} The extracted final answer
  */
 function extractNonThinkingContent(content) {
   if (!content) return '';
   
-  // 移除 <think>...</think> 标签及其内容
+  // Remove <think>...</think> tags and their content
   let result = content.replace(/<think>[\s\S]*?<\/think>/gi, '');
   
-  // 移除可能的其他思维链标记
+  // Remove other possible chain-of-thought markers
   result = result.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
   
-  // 清理多余的空白字符
+  // Clean up extra whitespace
   result = result.trim();
   
-  // 如果结果为空，尝试查找最后一个思维链标签后的内容
+  // If the result is empty, try to find the content after the last chain-of-thought tag
   if (!result && content.includes('</think>')) {
     const lastThinkEnd = content.lastIndexOf('</think>');
     if (lastThinkEnd !== -1) {
-      result = content.substring(lastThinkEnd + 8).trim(); // 8 是 '</think>' 的长度
+      result = content.substring(lastThinkEnd + 8).trim(); // 8 is the length of '</think>'
     }
   }
   
-  // 如果结果为空，尝试查找最后一个 thinking 标签后的内容
+  // If the result is empty, try to find the content after the last thinking tag
   if (!result && content.includes('</thinking>')) {
     const lastThinkingEnd = content.lastIndexOf('</thinking>');
     if (lastThinkingEnd !== -1) {
-      result = content.substring(lastThinkingEnd + 11).trim(); // 11 是 '</thinking>' 的长度
+      result = content.substring(lastThinkingEnd + 11).trim(); // 11 is the length of '</thinking>'
     }
   }
   
@@ -92,14 +92,14 @@ function extractNonThinkingContent(content) {
 }
 
 /**
- * 调用 LMStudio API 修正 LaTeX 公式
- * @param {string} formula - 错误的公式
- * @param {string} error - 错误信息
- * @returns {string|null} 修正后的公式或 null
+ * Calls the LMStudio API to correct a LaTeX formula
+ * @param {string} formula - The incorrect formula
+ * @param {string} error - The error message
+ * @returns {string|null} The corrected formula or null
  */
 export async function callLMStudioAPI(formula, error) {
   try {
-    const prompt = `原始公式: ${formula}\n错误信息: ${error}`;
+    const prompt = `Original formula: ${formula}\nError message: ${error}`;
     
     const response = await fetch(`${LMSTUDIO_CONFIG.baseUrl}/v1/chat/completions`, {
       method: 'POST',
@@ -123,39 +123,39 @@ export async function callLMStudioAPI(formula, error) {
     });
 
     if (!response.ok) {
-      throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     let correctedFormula = data.choices?.[0]?.message?.content?.trim();
     
     if (!correctedFormula) {
-      throw new Error('API 返回为空');
+      throw new Error('API returned empty');
     }
     
-    // 提取非思维链内容（去除 <think> 标签内的内容）
+    // Extract non-chain-of-thought content (removes content within <think> tags)
     correctedFormula = extractNonThinkingContent(correctedFormula);
     
     if (!correctedFormula) {
-      throw new Error('提取最终答案后内容为空');
+      throw new Error('Content is empty after extracting the final answer');
     }
     
     return correctedFormula;
   } catch (error) {
-    console.error(chalk.red(`   ❌ LMStudio API 调用失败: ${error.message}`));
+    console.error(chalk.red(`   ❌ LMStudio API call failed: ${error.message}`));
     return null;
   }
 }
 
 /**
- * 调用 Ollama API 修正 LaTeX 公式
- * @param {string} formula - 错误的公式
- * @param {string} error - 错误信息
- * @returns {string|null} 修正后的公式或 null
+ * Calls the Ollama API to correct a LaTeX formula
+ * @param {string} formula - The incorrect formula
+ * @param {string} error - The error message
+ * @returns {string|null} The corrected formula or null
  */
 export async function callOllamaAPI(formula, error) {
   try {
-    const prompt = `原始公式: ${formula}\n错误信息: ${error}`;
+    const prompt = `Original formula: ${formula}\nError message: ${error}`;
     
     const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
       method: 'POST',
@@ -179,43 +179,43 @@ export async function callOllamaAPI(formula, error) {
     });
 
     if (!response.ok) {
-      throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     let correctedFormula = data.message?.content?.trim();
     
     if (!correctedFormula) {
-      throw new Error('API 返回为空');
+      throw new Error('API returned empty');
     }
     
-    // 提取非思维链内容（去除 <think> 标签内的内容）
+    // Extract non-chain-of-thought content (removes content within <think> tags)
     correctedFormula = extractNonThinkingContent(correctedFormula);
     
     if (!correctedFormula) {
-      throw new Error('提取最终答案后内容为空');
+      throw new Error('Content is empty after extracting the final answer');
     }
     
     return correctedFormula;
   } catch (error) {
-    console.error(chalk.red(`   ❌ Ollama API 调用失败: ${error.message}`));
+    console.error(chalk.red(`   ❌ Ollama API call failed: ${error.message}`));
     return null;
   }
 }
 
 /**
- * 调用 OpenAI 兼容 API 修正 LaTeX 公式
- * @param {string} formula - 错误的公式
- * @param {string} error - 错误信息
- * @returns {string|null} 修正后的公式或 null
+ * Calls an OpenAI compatible API to correct a LaTeX formula
+ * @param {string} formula - The incorrect formula
+ * @param {string} error - The error message
+ * @returns {string|null} The corrected formula or null
  */
 export async function callOpenAIAPI(formula, error) {
   try {
     if (!OPENAI_CONFIG.apiKey) {
-      throw new Error('API Key 未配置，请设置 OPENAI_API_KEY 环境变量');
+      throw new Error('API Key not configured, please set the OPENAI_API_KEY environment variable');
     }
 
-    const prompt = `原始公式: ${formula}\n错误信息: ${error}`;
+    const prompt = `Original formula: ${formula}\nError message: ${error}`;
     
     const response = await fetch(`${OPENAI_CONFIG.baseUrl}/v1/chat/completions`, {
       method: 'POST',
@@ -240,36 +240,36 @@ export async function callOpenAIAPI(formula, error) {
     });
 
     if (!response.ok) {
-      throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     let correctedFormula = data.choices?.[0]?.message?.content?.trim();
     
     if (!correctedFormula) {
-      throw new Error('API 返回为空');
+      throw new Error('API returned empty');
     }
     
-    // 提取非思维链内容（去除 <think> 标签内的内容）
+    // Extract non-chain-of-thought content (removes content within <think> tags)
     correctedFormula = extractNonThinkingContent(correctedFormula);
     
     if (!correctedFormula) {
-      throw new Error('提取最终答案后内容为空');
+      throw new Error('Content is empty after extracting the final answer');
     }
     
     return correctedFormula;
   } catch (error) {
-    console.error(chalk.red(`   ❌ OpenAI API 调用失败: ${error.message}`));
+    console.error(chalk.red(`   ❌ OpenAI API call failed: ${error.message}`));
     return null;
   }
 }
 
 /**
- * 统一的 LLM API 调用函数
- * @param {string} formula - 错误的公式
- * @param {string} error - 错误信息
- * @param {string} provider - LLM 提供商 ('lmstudio'、'ollama' 或 'openai')
- * @returns {string|null} 修正后的公式或 null
+ * Unified LLM API call function
+ * @param {string} formula - The incorrect formula
+ * @param {string} error - The error message
+ * @param {string} provider - The LLM provider ('lmstudio', 'ollama', or 'openai')
+ * @returns {string|null} The corrected formula or null
  */
 export async function callLLMAPI(formula, error, provider = LLM_PROVIDERS.LMSTUDIO) {
   switch (provider) {
@@ -284,11 +284,11 @@ export async function callLLMAPI(formula, error, provider = LLM_PROVIDERS.LMSTUD
 }
 
 /**
- * 用户确认修正
- * @param {string} originalFormula - 原始公式
- * @param {string} correctedFormula - 修正后的公式
- * @param {string} error - 错误信息
- * @returns {boolean} 用户是否确认
+ * Confirms the correction with the user
+ * @param {string} originalFormula - The original formula
+ * @param {string} correctedFormula - The corrected formula
+ * @param {string} error - The error message
+ * @returns {boolean} Whether the user confirmed
  */
 export async function confirmCorrection(originalFormula, correctedFormula, error) {
   const rl = readline.createInterface({
@@ -297,12 +297,12 @@ export async function confirmCorrection(originalFormula, correctedFormula, error
   });
 
   return new Promise((resolve) => {
-    console.log(chalk.cyan('\n📝 公式修正建议:'));
-    console.log(chalk.yellow(`   原始公式: ${originalFormula}`));
-    console.log(chalk.red(`   错误信息: ${error}`));
-    console.log(chalk.green(`   修正建议: ${correctedFormula}`));
+    console.log(chalk.cyan('\n📝 Formula Correction Suggestion:'));
+    console.log(chalk.yellow(`   Original formula: ${originalFormula}`));
+    console.log(chalk.red(`   Error message: ${error}`));
+    console.log(chalk.green(`   Suggested correction: ${correctedFormula}`));
     
-    rl.question(chalk.blue('   是否应用此修正? (y/N): '), (answer) => {
+    rl.question(chalk.blue('   Apply this correction? (y/N): '), (answer) => {
       rl.close();
       resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
     });
@@ -310,10 +310,10 @@ export async function confirmCorrection(originalFormula, correctedFormula, error
 }
 
 /**
- * 验证修正后的公式
- * @param {string} formula - 公式内容
- * @param {boolean} isBlock - 是否为块级公式
- * @returns {boolean} 是否通过验证
+ * Validates the corrected formula
+ * @param {string} formula - The formula content
+ * @param {boolean} isBlock - Whether it is a block-level formula
+ * @returns {boolean} Whether it passed validation
  */
 export function validateCorrectedFormula(formula, isBlock = false) {
   try {
@@ -328,42 +328,42 @@ export function validateCorrectedFormula(formula, isBlock = false) {
 }
 
 /**
- * 替换文件中的公式
- * @param {string} filePath - 文件路径
- * @param {string} originalFormula - 原始公式
- * @param {string} correctedFormula - 修正后的公式
- * @returns {boolean} 是否成功替换
+ * Replaces the formula in the file
+ * @param {string} filePath - The file path
+ * @param {string} originalFormula - The original formula
+ * @param {string} correctedFormula - The corrected formula
+ * @returns {boolean} Whether the replacement was successful
  */
 export async function replaceFormulaInFile(filePath, originalFormula, correctedFormula) {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     
-    // 查找并替换公式
+    // Find and replace the formula
     const updatedContent = content.replace(originalFormula, correctedFormula);
     
     if (updatedContent === content) {
-      console.log(chalk.yellow(`   ⚠️ 在文件中未找到完全匹配的公式`));
+      console.log(chalk.yellow(`   ⚠️ No exact match for the formula found in the file`));
       return false;
     }
     
     await fs.writeFile(filePath, updatedContent, 'utf-8');
-    console.log(chalk.green(`   ✅ 公式已成功替换`));
+    console.log(chalk.green(`   ✅ Formula replaced successfully`));
     return true;
   } catch (error) {
-    console.log(chalk.red(`   ❌ 替换失败: ${error.message}`));
+    console.log(chalk.red(`   ❌ Replacement failed: ${error.message}`));
     return false;
   }
 }
 
 /**
- * 提取公式内容（去除分隔符）
- * @param {string} formula - 完整公式
- * @returns {string} 公式内容
+ * Extracts the formula content (removes delimiters)
+ * @param {string} formula - The full formula
+ * @returns {string} The formula content
  */
 export function extractFormulaContent(formula) {
   let content = formula;
   
-  // 去除分隔符
+  // Remove delimiters
   if (content.startsWith('$$') && content.endsWith('$$')) {
     content = content.slice(2, -2).trim();
   } else if (content.startsWith('$') && content.endsWith('$')) {
@@ -378,10 +378,10 @@ export function extractFormulaContent(formula) {
 }
 
 /**
- * 构建完整的修正公式（添加分隔符）
- * @param {string} originalFormula - 原始公式
- * @param {string} correctedContent - 修正后的内容
- * @returns {string} 完整的修正公式
+ * Builds the full corrected formula (adds delimiters)
+ * @param {string} originalFormula - The original formula
+ * @param {string} correctedContent - The corrected content
+ * @returns {string} The full corrected formula
  */
 export function buildCorrectedFormula(originalFormula, correctedContent) {
   if (originalFormula.startsWith('$$')) {
@@ -396,41 +396,41 @@ export function buildCorrectedFormula(originalFormula, correctedContent) {
 }
 
 /**
- * 处理单个公式错误的修正
- * @param {Object} error - 错误对象
- * @param {string} filePath - 文件路径
- * @param {Object} config - 配置对象
- * @returns {boolean} 是否成功修正
+ * Handles the correction of a single formula error
+ * @param {Object} error - The error object
+ * @param {string} filePath - The file path
+ * @param {Object} config - The configuration object
+ * @returns {boolean} Whether the correction was successful
  */
 export async function fixSingleFormulaError(error, filePath, config = {}) {
   const { autoConfirm = false, provider = LLM_PROVIDERS.LMSTUDIO } = config;
   
-  console.log(chalk.cyan('   🔧 正在尝试自动修正...'));
+  console.log(chalk.cyan('   🔧 Attempting to auto-correct...'));
   
-  // 提取公式内容
+  // Extract formula content
   const formulaContent = error.content || extractFormulaContent(error.formula);
   
-  // 调用 LLM API
+  // Call LLM API
   const correctedFormula = await callLLMAPI(formulaContent, error.error, provider);
   
   if (!correctedFormula) {
     return false;
   }
   
-  // 验证修正后的公式
+  // Validate the corrected formula
   const isBlock = error.type === 'block' || 
     error.formula.includes('$$') || 
     error.formula.includes('\\[');
   const isValid = validateCorrectedFormula(correctedFormula, isBlock);
   
   if (!isValid) {
-    console.log(chalk.red(`   ❌ 修正后的公式仍有错误，跳过`));
+    console.log(chalk.red(`   ❌ The corrected formula still has errors, skipping`));
     return false;
   }
   
-  console.log(chalk.green(`   ✅ 验证通过: ${correctedFormula}`));
+  console.log(chalk.green(`   ✅ Validation passed: ${correctedFormula}`));
   
-  // 用户确认或自动确认
+  // User confirmation or auto-confirmation
   let shouldApply = autoConfirm;
   
   if (!shouldApply) {
@@ -439,21 +439,21 @@ export async function fixSingleFormulaError(error, filePath, config = {}) {
   }
   
   if (shouldApply) {
-    // 构建完整的修正公式并替换
+    // Build the full corrected formula and replace
     const fullCorrectedFormula = buildCorrectedFormula(error.formula, correctedFormula);
     return await replaceFormulaInFile(filePath, error.formula, fullCorrectedFormula);
   } else {
-    console.log(chalk.gray(`   ↩️ 跳过修正`));
+    console.log(chalk.gray(`   ↩️ Skipping correction`));
     return false;
   }
 }
 
 /**
- * 处理详细模式的单个公式错误修正
- * @param {Object} error - 错误对象（详细模式格式）
- * @param {string} filePath - 文件路径
- * @param {Object} config - 配置对象
- * @returns {boolean} 是否成功修正
+ * Handles the correction of a single formula error in detailed mode
+ * @param {Object} error - The error object (detailed mode format)
+ * @param {string} filePath - The file path
+ * @param {Object} config - The configuration object
+ * @returns {boolean} Whether the correction was successful
  */
 export async function fixSingleDetailedFormulaError(error, filePath, config = {}) {
   const { autoConfirm = false, provider = LLM_PROVIDERS.LMSTUDIO } = config;
@@ -464,33 +464,33 @@ export async function fixSingleDetailedFormulaError(error, filePath, config = {}
     return false;
   }
   
-  console.log(chalk.cyan('   🔧 正在尝试自动修正...'));
+  console.log(chalk.cyan('   🔧 Attempting to auto-correct...'));
   
-  // 提取公式内容
+  // Extract formula content
   let formulaContent = expr.content || '';
   if (!formulaContent && expr.raw) {
     formulaContent = extractFormulaContent(expr.raw);
   }
   
-  // 调用 LLM API
+  // Call LLM API
   const correctedFormula = await callLLMAPI(formulaContent, error.error.message, provider);
   
   if (!correctedFormula) {
     return false;
   }
   
-  // 验证修正后的公式
+  // Validate the corrected formula
   const isBlock = expr.type === 'block';
   const isValid = validateCorrectedFormula(correctedFormula, isBlock);
   
   if (!isValid) {
-    console.log(chalk.red(`   ❌ 修正后的公式仍有错误，跳过`));
+    console.log(chalk.red(`   ❌ The corrected formula still has errors, skipping`));
     return false;
   }
   
-  console.log(chalk.green(`   ✅ 验证通过: ${correctedFormula}`));
+  console.log(chalk.green(`   ✅ Validation passed: ${correctedFormula}`));
   
-  // 用户确认或自动确认
+  // User confirmation or auto-confirmation
   let shouldApply = autoConfirm;
   
   if (!shouldApply) {
@@ -499,19 +499,19 @@ export async function fixSingleDetailedFormulaError(error, filePath, config = {}
   }
   
   if (shouldApply) {
-    // 构建完整的修正公式并替换
+    // Build the full corrected formula and replace
     const fullCorrectedFormula = buildCorrectedFormula(expr.raw, correctedFormula);
     return await replaceFormulaInFile(filePath, expr.raw, fullCorrectedFormula);
   } else {
-    console.log(chalk.gray(`   ↩️ 跳过修正`));
+    console.log(chalk.gray(`   ↩️ Skipping correction`));
     return false;
   }
 }
 
 /**
- * 检测 LLM 提供商的可用性
- * @param {string} provider - LLM 提供商
- * @returns {boolean} 是否可用
+ * Checks the availability of an LLM provider
+ * @param {string} provider - The LLM provider
+ * @returns {boolean} Whether it is available
  */
 export async function checkLLMProviderAvailability(provider) {
   try {
@@ -526,7 +526,7 @@ export async function checkLLMProviderAvailability(provider) {
         if (OPENAI_CONFIG.apiKey) {
           headers['Authorization'] = `Bearer ${OPENAI_CONFIG.apiKey}`;
         } else {
-          console.log(chalk.yellow(`   ⚠️ OpenAI API Key 未配置`));
+          console.log(chalk.yellow(`   ⚠️ OpenAI API Key not configured`));
           return false;
         }
         break;
@@ -539,7 +539,7 @@ export async function checkLLMProviderAvailability(provider) {
     const response = await fetch(url, { 
       method: 'GET',
       headers,
-      signal: AbortSignal.timeout(5000) // 5秒超时
+      signal: AbortSignal.timeout(5000) // 5-second timeout
     });
     
     return response.ok;
@@ -549,37 +549,37 @@ export async function checkLLMProviderAvailability(provider) {
 }
 
 /**
- * 自动选择可用的 LLM 提供商
- * @param {string} preferredProvider - 首选提供商
- * @returns {string} 可用的提供商
+ * Automatically selects an available LLM provider
+ * @param {string} preferredProvider - The preferred provider
+ * @returns {string} The available provider
  */
 export async function selectAvailableLLMProvider(preferredProvider = LLM_PROVIDERS.LMSTUDIO) {
-  // 首先检查首选提供商
+  // First check the preferred provider
   if (await checkLLMProviderAvailability(preferredProvider)) {
-    console.log(chalk.green(`   ✅ 使用 ${preferredProvider.toUpperCase()} 提供商`));
+    console.log(chalk.green(`   ✅ Using ${preferredProvider.toUpperCase()} provider`));
     return preferredProvider;
   }
   
-  // 如果首选提供商不可用，尝试其他提供商
+  // If the preferred provider is not available, try other providers
   const providers = Object.values(LLM_PROVIDERS);
   for (const provider of providers) {
     if (provider !== preferredProvider && await checkLLMProviderAvailability(provider)) {
-      console.log(chalk.yellow(`   ⚠️ ${preferredProvider.toUpperCase()} 不可用，切换到 ${provider.toUpperCase()}`));
+      console.log(chalk.yellow(`   ⚠️ ${preferredProvider.toUpperCase()} is not available, switching to ${provider.toUpperCase()}`));
       return provider;
     }
   }
   
-  console.log(chalk.red(`   ❌ 所有 LLM 提供商都不可用`));
+  console.log(chalk.red(`   ❌ All LLM providers are unavailable`));
   return null;
 }
 
 /**
- * 设置 OpenAI 兼容 API 配置
- * @param {Object} config - 配置对象
- * @param {string} config.baseUrl - API 基础URL
- * @param {string} config.model - 模型名称
- * @param {string} config.apiKey - API Key
- * @param {string} config.systemPrompt - 系统提示词
+ * Sets the OpenAI compatible API configuration
+ * @param {Object} config - The configuration object
+ * @param {string} config.baseUrl - The API base URL
+ * @param {string} config.model - The model name
+ * @param {string} config.apiKey - The API Key
+ * @param {string} config.systemPrompt - The system prompt
  */
 export function setOpenAIConfig(config) {
   if (config.baseUrl !== undefined) {
@@ -597,8 +597,8 @@ export function setOpenAIConfig(config) {
 }
 
 /**
- * 获取当前 OpenAI 配置
- * @returns {Object} 当前配置
+ * Gets the current OpenAI configuration
+ * @returns {Object} The current configuration
  */
 export function getOpenAIConfig() {
   return {
@@ -610,8 +610,8 @@ export function getOpenAIConfig() {
 }
 
 /**
- * 获取所有LLM提供商的配置概览
- * @returns {Object} 配置概览
+ * Gets a configuration overview of all LLM providers
+ * @returns {Object} The configuration overview
  */
 export function getAllLLMConfigs() {
   return {

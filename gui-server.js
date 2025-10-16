@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * GUI启动脚本
+ * GUI startup script
  */
 
 import { startGUI } from './src/gui.js';
@@ -10,8 +10,8 @@ import chalk from 'chalk';
 async function main() {
   console.log(chalk.cyan.bold(`
 ┌─────────────────────────────────────────┐
-│  🌐 Markdown PDF 可视化界面启动器        │
-│  📄→📁 直观转换 | 🔍 实时预览 | 📚 历史管理   │
+│  🌐 Markdown to PDF GUI Launcher        │
+│  📄→📁 Visual Conversion | 🔍 Real-time Preview | 📚 History Management   │
 └─────────────────────────────────────────┘
 `));
 
@@ -19,18 +19,18 @@ async function main() {
     const port = process.env.PORT || 3000;
     await startGUI({ port });
     
-    console.log(chalk.green('\n✨ GUI服务器启动成功!'));
-    console.log(chalk.yellow(`🌍 请在浏览器中访问: http://localhost:${port}`));
-    console.log(chalk.gray('\n按 Ctrl+C 停止服务器\n'));
+    console.log(chalk.green('\n✨ GUI server started successfully!'));
+    console.log(chalk.yellow(`🌍 Please visit in your browser: http://localhost:${port}`));
+    console.log(chalk.gray('\nPress Ctrl+C to stop the server\n'));
     
-    // 优雅地处理退出
+    // Gracefully handle exit
     process.on('SIGINT', () => {
-      console.log(chalk.yellow('\n👋 正在关闭服务器...'));
+      console.log(chalk.yellow('\n👋 Shutting down server...'));
       process.exit(0);
     });
 
   } catch (error) {
-    console.error(chalk.red('❌ 启动失败:'), error.message);
+    console.error(chalk.red('❌ Startup failed:'), error.message);
     process.exit(1);
   }
 }

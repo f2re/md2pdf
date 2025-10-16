@@ -1,5 +1,5 @@
 /**
- * 可视化界面模块 - Markdown to PDF GUI
+ * GUI Module - Markdown to PDF GUI
  */
 
 import express from 'express';
@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * GUI服务器类
+ * GUI Server Class
  */
 export class MarkdownPdfGUI {
   constructor(options = {}) {
@@ -27,18 +27,18 @@ export class MarkdownPdfGUI {
   }
 
   /**
-   * 设置中间件
+   * Set up middleware
    */
   setupMiddleware() {
-    // 静态文件服务
+    // Static file serving
     this.app.use('/static', express.static(path.join(__dirname, '../web')));
     this.app.use('/output', express.static(this.outputDir));
     
-    // JSON解析
+    // JSON parsing
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
 
-    // 文件上传配置
+    // File upload configuration
     const storage = multer.diskStorage({
       destination: async (req, file, cb) => {
         await this.ensureDir(this.uploadsDir);
@@ -57,7 +57,7 @@ export class MarkdownPdfGUI {
         if (file.mimetype === 'text/markdown' || file.originalname.endsWith('.md')) {
           cb(null, true);
         } else {
-          cb(new Error('只支持Markdown文件(.md)'));
+          cb(new Error('Only Markdown files (.md) are supported'));
         }
       },
       limits: {
@@ -67,19 +67,19 @@ export class MarkdownPdfGUI {
   }
 
   /**
-   * 设置路由
+   * Set up routes
    */
   setupRoutes() {
-    // 主页
+    // Home page
     this.app.get('/', (req, res) => {
       res.redirect('/static/index.html');
     });
 
-    // 上传并转换
+    // Upload and convert
     this.app.post('/convert', this.upload.single('markdown'), async (req, res) => {
       try {
         if (!req.file) {
-          return res.status(400).json({ error: '请选择Markdown文件' });
+          return res.status(400).json({ error: 'Please select a Markdown file' });
         }
 
         const options = this.parseConvertOptions(req.body);
@@ -89,7 +89,7 @@ export class MarkdownPdfGUI {
 
         await this.ensureDir(this.outputDir);
 
-        // 读取文件内容用于预览
+        // Read file content for preview
         const content = await fs.readFile(inputPath, 'utf-8');
 
         let result;
@@ -122,15 +122,15 @@ export class MarkdownPdfGUI {
 
         res.json(result);
       } catch (error) {
-        console.error('转换错误:', error);
+        console.error('Conversion error:', error);
         res.status(500).json({ 
-          error: '转换失败', 
+          error: 'Conversion failed', 
           message: error.message 
         });
       }
     });
 
-    // 获取转换历史
+    // Get conversion history
     this.app.get('/history', async (req, res) => {
       try {
         const files = await fs.readdir(this.outputDir);
@@ -151,11 +151,11 @@ export class MarkdownPdfGUI {
         history.sort((a, b) => new Date(b.created) - new Date(a.created));
         res.json(history);
       } catch (error) {
-        res.status(500).json({ error: '获取历史记录失败' });
+        res.status(500).json({ error: 'Failed to get history' });
       }
     });
 
-    // 删除文件
+    // Delete file
     this.app.delete('/file/:filename', async (req, res) => {
       try {
         const filename = req.params.filename;
@@ -165,14 +165,14 @@ export class MarkdownPdfGUI {
           await fs.unlink(filePath);
           res.json({ success: true });
         } else {
-          res.status(404).json({ error: '文件不存在' });
+          res.status(404).json({ error: 'File not found' });
         }
       } catch (error) {
-        res.status(500).json({ error: '删除文件失败' });
+        res.status(500).json({ error: 'Failed to delete file' });
       }
     });
 
-    // 获取文件内容用于审阅
+    // Get file content for review
     this.app.get('/review/:filename', async (req, res) => {
       try {
         const filename = req.params.filename;
@@ -198,19 +198,19 @@ export class MarkdownPdfGUI {
               modified: stats.mtime
             });
           } else {
-            res.status(400).json({ error: '不支持的文件类型' });
+            res.status(400).json({ error: 'Unsupported file type' });
           }
         } else {
-          res.status(404).json({ error: '文件不存在' });
+          res.status(404).json({ error: 'File not found' });
         }
       } catch (error) {
-        res.status(500).json({ error: '获取文件内容失败' });
+        res.status(500).json({ error: 'Failed to get file content' });
       }
     });
   }
 
   /**
-   * 解析转换选项
+   * Parses conversion options
    */
   parseConvertOptions(body) {
     const format = body.format || 'pdf';
@@ -239,7 +239,7 @@ export class MarkdownPdfGUI {
   }
 
   /**
-   * 生成输出文件名
+   * Generates an output filename
    */
   generateOutputFilename(originalName, format) {
     const timestamp = Date.now();
@@ -249,7 +249,7 @@ export class MarkdownPdfGUI {
   }
 
   /**
-   * 确保目录存在
+   * Ensures a directory exists
    */
   async ensureDir(dirPath) {
     try {
@@ -260,7 +260,7 @@ export class MarkdownPdfGUI {
   }
 
   /**
-   * 启动服务器
+   * Starts the server
    */
   async start() {
     await this.ensureDir(this.uploadsDir);
@@ -268,17 +268,17 @@ export class MarkdownPdfGUI {
     
     return new Promise((resolve) => {
       this.server = this.app.listen(this.port, () => {
-        console.log(`🌐 Markdown PDF GUI 服务器启动`);
-        console.log(`📍 地址: http://localhost:${this.port}`);
-        console.log(`📁 上传目录: ${this.uploadsDir}`);
-        console.log(`📁 输出目录: ${this.outputDir}`);
+        console.log(`🌐 Markdown PDF GUI server started`);
+        console.log(`📍 Address: http://localhost:${this.port}`);
+        console.log(`📁 Upload directory: ${this.uploadsDir}`);
+        console.log(`📁 Output directory: ${this.outputDir}`);
         resolve();
       });
     });
   }
 
   /**
-   * 停止服务器
+   * Stops the server
    */
   stop() {
     if (this.server) {
@@ -288,7 +288,7 @@ export class MarkdownPdfGUI {
 }
 
 /**
- * 启动GUI服务器
+ * Starts the GUI server
  */
 export async function startGUI(options = {}) {
   const gui = new MarkdownPdfGUI(options);

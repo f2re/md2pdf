@@ -1,5 +1,5 @@
 /**
- * CLI界面模块
+ * CLI Interface Module
  */
 
 import { program } from 'commander';
@@ -10,107 +10,107 @@ import { convertMarkdownToPdf } from './converter.js';
 import { MATH_ENGINE, DEFAULT_MATH_ENGINE } from './config.js';
 
 /**
- * 为数值类型选项自动添加单位
- * 支持自动单位添加的选项：
- * - margin: 纯数字自动添加 mm 单位
- * - fontSize: 纯数字自动添加 px 单位  
- * - fontWeight: 数值保持不变（CSS支持纯数字）
- * - lineSpacing: 纯数字保持不变（line-height支持纯数字）
- * - paragraphSpacing: 纯数字自动添加 em 单位
- * - mathSpacing: 纯数字自动添加 px 单位
+ * Automatically adds units to numeric options.
+ * Options that support automatic unit addition:
+ * - margin: adds mm unit to pure numbers
+ * - fontSize: adds px unit to pure numbers
+ * - fontWeight: numeric value remains unchanged (CSS supports pure numbers)
+ * - lineSpacing: pure number remains unchanged (line-height supports pure numbers)
+ * - paragraphSpacing: adds em unit to pure numbers
+ * - mathSpacing: adds px unit to pure numbers
  * 
- * @param {Object} options - 原始选项对象
- * @returns {Object} 处理后的选项对象
+ * @param {Object} options - The original options object
+ * @returns {Object} The processed options object
  */
 function normalizeNumericOptions(options) {
   const normalized = { ...options };
   
-  // 处理margin选项 - 如果是纯数字（整数或小数）则添加mm单位
+  // Process margin option - if it's a pure number (integer or decimal), add mm unit
   if (normalized.margin && /^(\d+|\d*\.\d+)$/.test(normalized.margin)) {
     normalized.margin = normalized.margin + 'mm';
-    console.log(chalk.dim(`  🔧 自动添加单位: margin ${options.margin} → ${normalized.margin}`));
+    console.log(chalk.dim(`  🔧 Automatically adding unit: margin ${options.margin} → ${normalized.margin}`));
   }
   
-  // 处理font-size选项 - 如果是纯数字（整数或小数）则添加px单位
+  // Process font-size option - if it's a pure number (integer or decimal), add px unit
   if (normalized.fontSize && /^(\d+|\d*\.\d+)$/.test(normalized.fontSize)) {
     normalized.fontSize = normalized.fontSize + 'px';
-    console.log(chalk.dim(`  🔧 自动添加单位: fontSize ${options.fontSize} → ${normalized.fontSize}`));
+    console.log(chalk.dim(`  🔧 Automatically adding unit: fontSize ${options.fontSize} → ${normalized.fontSize}`));
   }
   
-  // 处理paragraph-spacing选项 - 如果是纯数字（整数或小数）则添加em单位
+  // Process paragraph-spacing option - if it's a pure number (integer or decimal), add em unit
   if (normalized.paragraphSpacing && /^(\d+|\d*\.\d+)$/.test(normalized.paragraphSpacing)) {
     normalized.paragraphSpacing = normalized.paragraphSpacing + 'em';
-    console.log(chalk.dim(`  🔧 自动添加单位: paragraphSpacing ${options.paragraphSpacing} → ${normalized.paragraphSpacing}`));
+    console.log(chalk.dim(`  🔧 Automatically adding unit: paragraphSpacing ${options.paragraphSpacing} → ${normalized.paragraphSpacing}`));
   }
   
-  // 处理math-spacing选项 - 如果是纯数字（整数或小数）则添加px单位
+  // Process math-spacing option - if it's a pure number (integer or decimal), add px unit
   if (normalized.mathSpacing && /^(\d+|\d*\.\d+)$/.test(normalized.mathSpacing)) {
     normalized.mathSpacing = normalized.mathSpacing + 'px';
-    console.log(chalk.dim(`  🔧 自动添加单位: mathSpacing ${options.mathSpacing} → ${normalized.mathSpacing}`));
+    console.log(chalk.dim(`  🔧 Automatically adding unit: mathSpacing ${options.mathSpacing} → ${normalized.mathSpacing}`));
   }
   
-  // font-weight和line-spacing选项不需要添加单位，CSS支持纯数字和关键词
+  // font-weight and line-spacing options do not need units, CSS supports pure numbers and keywords
   
   return normalized;
 }
 
 /**
- * 显示工具标题
+ * Displays the tool title
  */
 export function showTitle() {
   console.log(chalk.cyan.bold(`
 ┌──────────────────────────────────┐
-│  📄 Markdown LaTeX → PDF 转换器  │
-│  🧮 支持数学公式 | 🎨 美观排版   │
+│  📄 Markdown LaTeX → PDF Converter  │
+│  🧮 Supports Math Formulas | 🎨 Beautiful Typesetting   │
 └──────────────────────────────────┘
 `));
 }
 
 /**
- * 创建CLI程序
- * @returns {Command} Commander程序实例
+ * Creates the CLI program
+ * @returns {Command} Commander program instance
  */
 export function createCLI() {
   return program
     .name('md2pdf')
-    .description('将Markdown文件(含LaTeX公式)转换为PDF')
+    .description('Converts Markdown files (with LaTeX formulas) to PDF')
     .version('1.0.0')
-    .argument('<input>', 'Markdown输入文件路径')
-    .argument('[output]', 'PDF输出文件路径(可选)')
-    .option('-v, --verbose', '显示详细信息')
-    .option('-f, --format <format>', '输出格式 (pdf|html)', 'pdf')
-    .option('--margin <margin>', 'PDF页边距 (例如: 20mm)', '0mm')
-    .option('--landscape', '横向页面')
-    .option('--font-size <size>', '字体大小 (small|medium|large|xlarge 或具体数值如 14px)', 'large')
-    .option('--chinese-font <font>', '中文字体 (simsun|simhei|simkai|fangsong|yahei|auto)', 'auto')
-    .option('--font-weight <weight>', '文字厚度 (light|normal|medium|semibold|bold|black 或数值如 400)', 'medium')
-    .option('--line-spacing <spacing>', '行间距 (tight|normal|loose|relaxed 或数值如 1.6)', 'normal')
-    .option('--paragraph-spacing <spacing>', '段落间距 (tight|normal|loose|relaxed 或数值如 1em)', 'normal')
-    .option('--math-spacing <spacing>', '数学公式上下间距 (tight|normal|loose|relaxed 或数值如 20px)', 'tight')
-    .option('--math-engine <engine>', '数学引擎 (auto|katex|mathjax)', DEFAULT_MATH_ENGINE)
+    .argument('<input>', 'Markdown input file path')
+    .argument('[output]', 'PDF output file path (optional)')
+    .option('-v, --verbose', 'Show detailed information')
+    .option('-f, --format <format>', 'Output format (pdf|html)', 'pdf')
+    .option('--margin <margin>', 'PDF page margin (e.g., 20mm)', '0mm')
+    .option('--landscape', 'Landscape page orientation')
+    .option('--font-size <size>', 'Font size (small|medium|large|xlarge or a specific value like 14px)', 'large')
+    .option('--chinese-font <font>', 'Chinese font (simsun|simhei|simkai|fangsong|yahei|auto)', 'auto')
+    .option('--font-weight <weight>', 'Font weight (light|normal|medium|semibold|bold|black or a numeric value like 400)', 'medium')
+    .option('--line-spacing <spacing>', 'Line spacing (tight|normal|loose|relaxed or a numeric value like 1.6)', 'normal')
+    .option('--paragraph-spacing <spacing>', 'Paragraph spacing (tight|normal|loose|relaxed or a numeric value like 1em)', 'normal')
+    .option('--math-spacing <spacing>', 'Vertical spacing for math formulas (tight|normal|loose|relaxed or a numeric value like 20px)', 'tight')
+    .option('--math-engine <engine>', 'Math engine (auto|katex|mathjax)', DEFAULT_MATH_ENGINE)
     .action(async (input, output, options) => {
       await handleConvert(input, output, options);
     });
 }
 
 /**
- * 处理转换命令
- * @param {string} input - 输入文件路径
- * @param {string} output - 输出文件路径
- * @param {Object} options - 命令选项
+ * Handles the convert command
+ * @param {string} input - The input file path
+ * @param {string} output - The output file path
+ * @param {Object} options - The command options
  */
 async function handleConvert(input, output, options) {
   try {
-    // 规范化数值类型选项，自动添加单位
+    // Normalize numeric options, automatically adding units
     const normalizedOptions = normalizeNumericOptions(options);
     
-    // 检查输入文件是否存在
+    // Check if the input file exists
     if (!await fileExists(input)) {
-      console.error(chalk.red(`❌ 错误: 文件 '${input}' 不存在`));
+      console.error(chalk.red(`❌ Error: File '${input}' does not exist`));
       process.exit(1);
     }
 
-    // 自动生成输出文件名
+    // Automatically generate the output filename
     if (!output) {
       const path = await import('path');
       const parsed = path.parse(input);
@@ -118,25 +118,25 @@ async function handleConvert(input, output, options) {
       output = path.join(parsed.dir, `${parsed.name}.${extension}`);
     }
 
-    console.log(chalk.blue('🔄 开始转换...'));
-    console.log(chalk.gray(`📖 输入: ${input}`));
-    console.log(chalk.gray(`📁 输出: ${output}`));
-    console.log(chalk.gray(`📝 格式: ${normalizedOptions.format.toUpperCase()}`));
-    console.log(chalk.gray(`🎨 字体大小: ${normalizedOptions.fontSize}`));
-    console.log(chalk.gray(`📏 页边距: ${normalizedOptions.margin}`));
-    console.log(chalk.gray(`🇨🇳 中文字体: ${normalizedOptions.chineseFont}`));
-    console.log(chalk.gray(`💪 文字厚度: ${normalizedOptions.fontWeight}`));
-    console.log(chalk.gray(`📐 行间距: ${normalizedOptions.lineSpacing}`));
-    console.log(chalk.gray(`📄 段落间距: ${normalizedOptions.paragraphSpacing}`));
-    console.log(chalk.gray(`🧮 公式间距: ${normalizedOptions.mathSpacing}`));
+    console.log(chalk.blue('🔄 Starting conversion...'));
+    console.log(chalk.gray(`📖 Input: ${input}`));
+    console.log(chalk.gray(`📁 Output: ${output}`));
+    console.log(chalk.gray(`📝 Format: ${normalizedOptions.format.toUpperCase()}`));
+    console.log(chalk.gray(`🎨 Font Size: ${normalizedOptions.fontSize}`));
+    console.log(chalk.gray(`📏 Page Margin: ${normalizedOptions.margin}`));
+    console.log(chalk.gray(`🇨🇳 Chinese Font: ${normalizedOptions.chineseFont}`));
+    console.log(chalk.gray(`💪 Font Weight: ${normalizedOptions.fontWeight}`));
+    console.log(chalk.gray(`📐 Line Spacing: ${normalizedOptions.lineSpacing}`));
+    console.log(chalk.gray(`📄 Paragraph Spacing: ${normalizedOptions.paragraphSpacing}`));
+    console.log(chalk.gray(`🧮 Formula Spacing: ${normalizedOptions.mathSpacing}`));
   if (normalizedOptions.mathEngine) {
-      console.log(chalk.gray(`🧠 数学引擎: ${normalizedOptions.mathEngine}`));
+      console.log(chalk.gray(`🧠 Math Engine: ${normalizedOptions.mathEngine}`));
     }
     if (normalizedOptions.landscape) {
-      console.log(chalk.gray(`📱 页面方向: 横向`));
+      console.log(chalk.gray(`📱 Page Orientation: Landscape`));
     }
 
-    // 准备PDF选项
+    // Prepare PDF options
     const pdfOptions = {};
     if (normalizedOptions.margin) {
       pdfOptions.margin = {
@@ -150,7 +150,7 @@ async function handleConvert(input, output, options) {
       pdfOptions.landscape = true;
     }
 
-    // 准备样式选项
+    // Prepare style options
     const styleOptions = {
       fontSize: normalizedOptions.fontSize,
       chineseFont: normalizedOptions.chineseFont,
@@ -161,7 +161,7 @@ async function handleConvert(input, output, options) {
       mathEngine: normalizedOptions.mathEngine
     };
 
-    // 执行转换
+    // Execute the conversion
     const startTime = Date.now();
     
     if (normalizedOptions.format === 'pdf') {
@@ -170,16 +170,16 @@ async function handleConvert(input, output, options) {
       const { convertMarkdownToHtml } = await import('./converter.js');
       await convertMarkdownToHtml(input, output, { styleOptions });
     } else {
-      throw new Error(`不支持的格式: ${normalizedOptions.format}`);
+      throw new Error(`Unsupported format: ${normalizedOptions.format}`);
     }
     
     const duration = Date.now() - startTime;
 
-    console.log(chalk.green(`✅ 转换完成! (耗时: ${duration}ms)`));
-    console.log(chalk.yellow(`🎉 文件已生成: ${output}`));
+    console.log(chalk.green(`✅ Conversion complete! (Time taken: ${duration}ms)`));
+    console.log(chalk.yellow(`🎉 File generated: ${output}`));
 
   } catch (error) {
-    console.error(chalk.red(`❌ 转换失败: ${error.message}`));
+    console.error(chalk.red(`❌ Conversion failed: ${error.message}`));
     if (options && options.verbose) {
       console.error(chalk.gray(error.stack));
     }
@@ -188,7 +188,7 @@ async function handleConvert(input, output, options) {
 }
 
 /**
- * 运行CLI程序
+ * Runs the CLI program
  */
 export function runCLI() {
   showTitle();
